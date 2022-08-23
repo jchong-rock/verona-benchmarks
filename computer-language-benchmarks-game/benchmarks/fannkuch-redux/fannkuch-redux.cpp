@@ -1,5 +1,5 @@
 #include <cpp/when.h>
-#include "util/bench.h"
+#include <util/bench.h>
 
 using namespace std;
 
@@ -125,77 +125,86 @@ inline int64_t Permutation::countFlips() const
     return flips;
 }
 
-static void run(size_t n)
-{
-    // Compute some factorials for later use.
-    initializeFact(n);
 
-    // blockCount works best if it is set to a multiple of the number
-    // of CPUs so that the same number of blocks gets distributed to
-    // each cpu.  The computer used for development (Intel i7-4700MQ)
-    // had 8 "CPU"s (4 cores with hyperthreading) so 8, 16 and 24
-    // all worked well.
+struct Pfannkuchen : public AsyncBenchmark {
+  size_t n;
 
-    auto blockCount = 24;
-    if (blockCount > fact[n])
-        blockCount = 1;
-    const int64_t blockLength = fact[n] / blockCount;
+  Pfannkuchen(size_t n): n(n) {}
 
-    cown_ptr<int64_t> checksum;
-    cown_ptr<int64_t> maxFlips;
+  void run()
+  {
+      // Compute some factorials for later use.
+      initializeFact(n);
 
-    cown_ptr<int64_t> prevChecksum = make_cown<int64_t>(0);
-    cown_ptr<int64_t> prevMaxFlips = make_cown<int64_t>(0);
+      // blockCount works best if it is set to a multiple of the number
+      // of CPUs so that the same number of blocks gets distributed to
+      // each cpu.  The computer used for development (Intel i7-4700MQ)
+      // had 8 "CPU"s (4 cores with hyperthreading) so 8, 16 and 24
+      // all worked well.
 
-    for (int64_t blockStart = 0; blockStart < fact[n]; blockStart += blockLength)
-    {
-      checksum = make_cown<int64_t>(0);
-      maxFlips = make_cown<int64_t>(0);
+      auto blockCount = 24;
+      if (blockCount > fact[n])
+          blockCount = 1;
+      const int64_t blockLength = fact[n] / blockCount;
 
-      when(checksum, maxFlips) << [n, blockStart, blockLength](acquired_cown<int64_t> checksum, acquired_cown<int64_t> maxFlips)
+      cown_ptr<int64_t> checksum;
+      cown_ptr<int64_t> maxFlips;
+
+      cown_ptr<int64_t> prevChecksum = make_cown<int64_t>(0);
+      cown_ptr<int64_t> prevMaxFlips = make_cown<int64_t>(0);
+
+      for (int64_t blockStart = 0; blockStart < fact[n]; blockStart += blockLength)
       {
-        Permutation permutation(n, blockStart);
+        checksum = make_cown<int64_t>(0);
+        maxFlips = make_cown<int64_t>(0);
 
-        // Iterate over each permutation in the block.
-        auto index = blockStart;
-        while (1)
+        when(checksum, maxFlips) << [n=n, blockStart, blockLength](acquired_cown<int64_t> checksum, acquired_cown<int64_t> maxFlips)
         {
-            const auto flips = permutation.countFlips();
+          Permutation permutation(n, blockStart);
 
-            if (flips)
-            {
-                if (index % 2 == 0)
-                  *checksum += flips;
-                else
-                  *checksum -= flips;
+          // Iterate over each permutation in the block.
+          auto index = blockStart;
+          while (1)
+          {
+              const auto flips = permutation.countFlips();
 
-                if (flips > *maxFlips)
-                    *maxFlips = flips;
-            }
+              if (flips)
+              {
+                  if (index % 2 == 0)
+                    *checksum += flips;
+                  else
+                    *checksum -= flips;
 
-            if (++index == blockStart + blockLength)
-                break;
+                  if (flips > *maxFlips)
+                      *maxFlips = flips;
+              }
 
-            // next permutation for this block.
-            permutation.advance();
-        }
+              if (++index == blockStart + blockLength)
+                  break;
+
+              // next permutation for this block.
+              permutation.advance();
+          }
+        };
+
+        when(checksum, prevChecksum) << [](acquired_cown<int64_t> checksum, acquired_cown<int64_t> prevChecksum) { *checksum += *prevChecksum; };
+        when(maxFlips, prevMaxFlips) << [](acquired_cown<int64_t> maxFlips, acquired_cown<int64_t> prevMaxFlips) { if (*prevMaxFlips > *maxFlips) *maxFlips = *prevMaxFlips; };
+
+        prevChecksum = checksum;
+        prevMaxFlips = maxFlips;
+      }
+
+      // Output the results to stdout.
+      when(checksum, maxFlips) << [n=n](acquired_cown<int64_t> checksum, acquired_cown<int64_t> maxFlips)
+      {
+        cout << *checksum << endl;
+        cout << "Pfannkuchen(" << n << ") = " << maxFlips << endl;
       };
+  }
 
-      when(checksum, prevChecksum) << [](acquired_cown<int64_t> checksum, acquired_cown<int64_t> prevChecksum) { *checksum += *prevChecksum; };
-      when(maxFlips, prevMaxFlips) << [](acquired_cown<int64_t> maxFlips, acquired_cown<int64_t> prevMaxFlips) { if (*prevMaxFlips > *maxFlips) *maxFlips = *prevMaxFlips; };
-
-      prevChecksum = checksum;
-      prevMaxFlips = maxFlips;
-    }
-
-    // Output the results to stdout.
-    when(checksum, maxFlips) << [n](acquired_cown<int64_t> checksum, acquired_cown<int64_t> maxFlips)
-    {
-      cout << *checksum << endl;
-      cout << "Pfannkuchen(" << n << ") = " << maxFlips << endl;
-    };
-}
+  std::string name() { return "Pfannkuchen"; }
+};
 
 int main(int argc, const char** argv) {
-  Bench(argc, argv).run(run, size_t(12));
+  BenchmarkHarness(argc, argv).run<Pfannkuchen, 12>(12);
 }

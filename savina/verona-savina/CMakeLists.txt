@@ -1,7 +1,5 @@
 set(SAVINA ${CMAKE_CURRENT_SOURCE_DIR}/savina)
 
-include_directories(${SAVINA})
-
 set(CMAKE_CXX_FLAGS)
 
 unset(SRC)

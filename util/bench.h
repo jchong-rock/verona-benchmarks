@@ -9,22 +9,20 @@ using verona::cpp::make_cown;
 using verona::cpp::cown_ptr;
 using verona::cpp::acquired_cown;
 
-struct Savina;
-
 struct AsyncBenchmark {
   virtual void run()=0;
   virtual std::string name()=0;
   virtual ~AsyncBenchmark() {}
 };
 
-struct Savina {
+struct BenchmarkHarness {
   opt::Opt opt;
 
   size_t cores;
   bool detect_leaks;
 
-  Savina(const int argc, const char** argv) : opt(argc, argv) {
-    std::cout << "Savina starting." << std::endl;
+  BenchmarkHarness(const int argc, const char** argv) : opt(argc, argv) {
+    std::cout << "BenchmarkHarness starting." << std::endl;
 
     for (int i = 0; i < argc; i++)
     {

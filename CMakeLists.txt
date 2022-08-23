@@ -6,6 +6,8 @@ set(VERONA_RT_ONLY_HEADER_LIBRARY ON)
 
 add_subdirectory(verona/src/rt)
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
 add_subdirectory(savina/verona-savina)
 
 add_subdirectory(computer-language-benchmarks-game)
