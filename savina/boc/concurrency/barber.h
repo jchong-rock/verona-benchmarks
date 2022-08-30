@@ -26,15 +26,15 @@ struct CustomerFactory {
   static void left(cown_ptr<CustomerFactory>, cown_ptr<Customer>);
 };
 
-struct Customer {
+struct Customer { // things that become cowns do not know their own address
   cown_ptr<CustomerFactory> factory;
 
   Customer(cown_ptr<CustomerFactory> factory): factory(factory) {}
 
-  static void full(cown_ptr<Customer>);
-  static void wait(cown_ptr<Customer>);
+  void full(cown_ptr<Customer>);
+  void pay_and_leave(cown_ptr<Customer>);
+  void wait();
   void sit_down() {};
-  void pay_and_leave() {};
 };
 
 struct Barber {
@@ -81,17 +81,17 @@ struct WaitingRoom {
   WaitingRoom(uint64_t size, cown_ptr<Barber> barber): size(size), barber_sleeps(true), barber(barber) {}
 
   static void enter(cown_ptr<WaitingRoom> self, cown_ptr<Customer> customer) {
-    when(self) << [customer, tag=self](acquired_cown<WaitingRoom> self) {
+    when(self, customer) << [customer_tag=customer, tag=self](acquired_cown<WaitingRoom> self, acquired_cown<Customer> customer) {
       if (self->customers.size() == self->size) {
-        Customer::full(customer);
+        customer->full(customer_tag);
       } else {
-        self->customers.push_back(customer);
+        self->customers.push_back(customer_tag);
 
         if (self->barber_sleeps) {
           self->barber_sleeps = false;
           WaitingRoom::next(tag);
         } else {
-          Customer::wait(customer);
+          customer->wait();
         }
       }
     };
@@ -103,10 +103,11 @@ struct WaitingRoom {
   static void next(cown_ptr<WaitingRoom> self) {
     when(self) << [tag=self](acquired_cown<WaitingRoom> self) {
       if (self->customers.size() > 0) {
-        when(self->barber, self->customers.front()) << [tag](acquired_cown<Barber> barber, acquired_cown<Customer> customer) {
+        auto customer = self->customers.front();
+        when(self->barber, customer) << [tag, customer_tag=customer](acquired_cown<Barber> barber, acquired_cown<Customer> customer) {
           customer->sit_down();
           BusyWaiter(Rand(12345).integer(barber->haircut_rate) + 10);
-          customer->pay_and_leave();
+          customer->pay_and_leave(customer_tag);
           WaitingRoom::next(tag);
         };
         self->customers.pop_front();
@@ -146,7 +147,10 @@ void CustomerFactory::run(cown_ptr<CustomerFactory> self, uint64_t rate) {
   };
 }
 
-void Customer::full(cown_ptr<Customer> self) { when(self) << [tag=self](acquired_cown<Customer> self){ CustomerFactory::returned(self->factory, tag); }; }
+void Customer::full(cown_ptr<Customer> self) { CustomerFactory::returned(factory, self); }
 
-void Customer::wait(cown_ptr<Customer> self) { when(self) << [](acquired_cown<Customer>){}; }
+void Customer::wait() { }
+
+void Customer::pay_and_leave(cown_ptr<Customer> self) { CustomerFactory::left(factory, self); }
+
 };
