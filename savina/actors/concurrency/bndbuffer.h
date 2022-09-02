@@ -10,6 +10,8 @@
 
 namespace ActorBenchmark {
 
+namespace {
+
 struct Producer;
 struct Consumer;
 
@@ -176,6 +178,8 @@ struct BndBuffer: public AsyncBenchmark {
   }
 
   std::string name() { return "Bounded Buffer"; }
+};
+
 };
 
 };

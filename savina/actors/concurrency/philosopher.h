@@ -5,6 +5,8 @@
 
 namespace ActorBenchmark {
 
+namespace {
+
 using verona::cpp::make_cown;
 using verona::cpp::cown_ptr;
 using verona::cpp::acquired_cown;
@@ -109,6 +111,8 @@ struct DiningPhilosophers: public AsyncBenchmark {
   }
 
   std::string name() { return "Dining Philosophers"; }
+};
+
 };
 
 };

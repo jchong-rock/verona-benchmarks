@@ -3,6 +3,8 @@
 
 namespace ActorBenchmark {
 
+namespace {
+
 struct Account;
 struct Teller;
 
@@ -136,6 +138,8 @@ struct Banking: public AsyncBenchmark {
   }
 
   std::string name() { return "Banking"; }
+};
+
 };
 
 };

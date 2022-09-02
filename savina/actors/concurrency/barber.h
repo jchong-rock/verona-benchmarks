@@ -6,6 +6,8 @@
 
 namespace ActorBenchmark {
 
+namespace {
+
 using verona::cpp::make_cown;
 using verona::cpp::cown_ptr;
 using verona::cpp::acquired_cown;
@@ -155,5 +157,7 @@ void Customer::wait(cown_ptr<Customer> self) { when(self) << [](acquired_cown<Cu
 void Customer::sit_down(cown_ptr<Customer> self) { when(self) << [](acquired_cown<Customer>){}; }
 
 void Customer::pay_and_leave(cown_ptr<Customer> self) { when(self) << [tag=self](acquired_cown<Customer> self){ CustomerFactory::left(self->factory, tag); }; }
+
+};
 
 };

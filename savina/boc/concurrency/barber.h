@@ -6,6 +6,8 @@
 
 namespace BOCBenchmark {
 
+namespace {
+
 using verona::cpp::make_cown;
 using verona::cpp::cown_ptr;
 using verona::cpp::acquired_cown;
@@ -31,7 +33,7 @@ struct Customer { // things that become cowns do not know their own address
 
   Customer(cown_ptr<CustomerFactory> factory): factory(factory) {}
 
-  void full(cown_ptr<Customer>);
+  // void full(cown_ptr<Customer>);
   void pay_and_leave(cown_ptr<Customer>);
   void wait();
   void sit_down() {};
@@ -83,7 +85,8 @@ struct WaitingRoom {
   static void enter(cown_ptr<WaitingRoom> self, cown_ptr<Customer> customer) {
     when(self, customer) << [customer_tag=customer, tag=self](acquired_cown<WaitingRoom> self, acquired_cown<Customer> customer) {
       if (self->customers.size() == self->size) {
-        customer->full(customer_tag);
+        // customer->full(customer_tag);
+        CustomerFactory::returned(customer->factory, customer_tag);
       } else {
         self->customers.push_back(customer_tag);
 
@@ -128,6 +131,7 @@ void CustomerFactory::returned(cown_ptr<CustomerFactory> self, cown_ptr<Customer
   };
 }
 
+// TODO: in verona we don't need to send a message back to the framework
 void CustomerFactory::left(cown_ptr<CustomerFactory> self, cown_ptr<Customer> customer) {
   when(self) << [](acquired_cown<CustomerFactory> self) {
     self->number_of_haircuts--;
@@ -147,10 +151,12 @@ void CustomerFactory::run(cown_ptr<CustomerFactory> self, uint64_t rate) {
   };
 }
 
-void Customer::full(cown_ptr<Customer> self) { CustomerFactory::returned(factory, self); }
+// void Customer::full(cown_ptr<Customer> self) { CustomerFactory::returned(factory, self); }
 
 void Customer::wait() { }
 
 void Customer::pay_and_leave(cown_ptr<Customer> self) { CustomerFactory::left(factory, self); }
+
+};
 
 };

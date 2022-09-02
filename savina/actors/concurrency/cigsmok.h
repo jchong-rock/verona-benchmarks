@@ -5,6 +5,8 @@
 
 namespace ActorBenchmark {
 
+namespace {
+
 using verona::cpp::make_cown;
 using verona::cpp::cown_ptr;
 using verona::cpp::acquired_cown;
@@ -65,7 +67,6 @@ void Smoker::smoke(cown_ptr<Smoker> self, uint64_t period) {
   };
 }
 
-
 struct Cigsmok: public AsyncBenchmark {
   uint64_t rounds;
   uint64_t smokers;
@@ -79,6 +80,8 @@ struct Cigsmok: public AsyncBenchmark {
   }
 
   std::string name() { return "Cigarette Smokers"; }
+};
+
 };
 
 };
