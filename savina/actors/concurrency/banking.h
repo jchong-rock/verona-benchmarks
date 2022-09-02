@@ -17,9 +17,9 @@ struct Account {
   std::deque<std::unique_ptr<StashToken>> stash;
   bool stash_mode;
 
-  Account(uint64_t index, double balance): index(index), stash_mode(false) {}
+  Account(uint64_t index, double balance): balance(balance), index(index), stash_mode(false) {}
 
-  static void debit(cown_ptr<Account>, cown_ptr<Account>, cown_ptr<Teller>, uint64_t);
+  static void debit(cown_ptr<Account>, cown_ptr<Account>, cown_ptr<Teller>, double);
   static void credit(cown_ptr<Account>, cown_ptr<Teller>, double, cown_ptr<Account>);
   static void reply(cown_ptr<Account>, cown_ptr<Teller>);
 };
@@ -86,7 +86,7 @@ struct Teller {
   }
 };
 
-void Account::debit(cown_ptr<Account> self, cown_ptr<Account> account, cown_ptr<Teller> teller, uint64_t amount) {
+void Account::debit(cown_ptr<Account> self, cown_ptr<Account> account, cown_ptr<Teller> teller, double amount) {
   when(self) << [account, teller, amount](acquired_cown<Account> self) {
     if (!self->stash_mode) {
       self->balance += amount;
