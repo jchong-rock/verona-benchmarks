@@ -6,13 +6,6 @@
 #include "util/random.h"
 
 struct ApspConfig {
-  
-};
-
-struct GraphData {
-  
-}
-
 // primitive ApspConfig
 //   fun val apply(): CommandSpec iso^ ? =>
 //     recover
@@ -34,50 +27,48 @@ struct GraphData {
 //         )
 //       ]) ?
 //     end 
+};
 
-// class GraphData
-//   var _workers: U64
-//   var _size: U64
-//   var _weight: U64
-//   var _data: Array[Array[U64]]
+struct GraphData {
+  uint64_t workers;
+  uint64_t size;
+  uint64_t weight;
+  std::vector<std::vector<uint64_t>> data;
 
-//   new generate(workers: U64, size: U64, weight: U64) =>
-//     _workers = workers
-//     _size = size
-//     _weight = weight
-    
-//     _data = Array[Array[U64]].init(Array[U64].init(0, _workers.usize()), _workers.usize())
+  GraphData(uint64_t workers, uint64_t size, uint64_t weight): workers(workers), size(size), weight(weight), data(workers, std::vector<uint64_t>(workers)) {
+    Rand rand(workers);
 
-//     let random = Rand(_workers)
+    for (uint64_t i = 0; i < workers; ++i) {
+      for (uint64_t j = 0; j < workers; ++j) {
+        uint64_t value = rand.integer(weight) + 1;
 
-//     for i in Range[USize](0, workers.usize()) do
-//       for j in Range[USize](0, workers.usize()) do
-//         let value = random.int(_weight) + 1
-        
-//         try
-//           _data(i)?(j)? = value
-//           _data(j)?(i)? = value
-//         end
-//       end
-//     end
-    
+        data[i][j] = value;
+        data[j][i] = value;
+      }
+    }
+  }
+
+  std::vector<std::vector<uint64_t>> get_block(uint64_t id) {
+    std::vector<std::vector<uint64_t>> local(size, std::vector<uint64_t>(size));
+
+    uint64_t dim = workers / size;
+    uint64_t start_row = (id / dim) * size;
+    uint64_t start_col = (id / dim) * size;
+
+    for (uint64_t i = 0; i < size; ++i) {
+      for (uint64_t j = 0; j < size; ++j) {
+        local[i][j] = data[i + start_row][j + start_col];
+      }
+    }
+
+    return local;
+  }
+};
+
+struct Apsp: public AsyncBenchmark {
+  uint64_t workers;
+  uint64_t blocks;
   
-//   fun val get_block(id: U64): Array[Array[U64]] val =>
-//     recover
-//       var local = Array[Array[U64]].init(Array[U64].init(0, _size.usize()), _size.usize())
-//       let dim = _workers / _size
-//       let start_row = ((id / dim) * _size).usize()
-//       let start_col = ((id % dim) * _size).usize()
-
-//       for i in Range[USize](0, _size.usize()) do
-//         for j in Range[USize](0, _size.usize()) do
-//           try local(i)?(j)? = _data(i + start_row)?(j + start_col)? end
-//         end
-//       end
-
-//       local
-//     end
-
 // actor Apsp
 //   new run(args: Command val, env: Env) =>
 //     let workers = args.option("workers").u64()
@@ -122,7 +113,9 @@ struct GraphData {
 //         try block_actors(o)?(p)?.start() end
 //       end
 //     end
+};
 
+struct FloydWarshall {
 // actor FloydWarshall
 //   var _id: U64
 //   var _nodes: U64
@@ -213,3 +206,4 @@ struct GraphData {
 //       _compute() ; _notify() ; _neighbor_data = Map[U64, Array[Array[U64]] val]
 //       _finished = _completions.u64() == (_nodes - 1)
 //     end
+};
