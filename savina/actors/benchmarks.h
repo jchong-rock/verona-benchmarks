@@ -2,6 +2,7 @@
 #include "concurrency/barber.h"
 #include "concurrency/bndbuffer.h"
 #include "concurrency/cigsmok.h"
+#include "concurrency/concdict.h"
 #include "concurrency/philosopher.h"
 
 // #include "parallel/apsp.h"

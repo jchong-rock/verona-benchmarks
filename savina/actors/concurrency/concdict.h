@@ -1,82 +1,108 @@
-// use "collections"
-// use "../../util"
+#include "util/bench.h"
+#include "util/random.h"
 
-// class iso Concdict is AsyncActorBenchmark
-//   let _workers: U64
-//   let _messages: U64
-//   let _percentage: U64
+namespace ActorBenchmark {
 
-//   new iso create(workers: U64, messages: U64, percentage: U64) =>
-//     _workers = workers
-//     _messages = messages
-//     _percentage = percentage
-  
-//   fun box apply(c: AsyncBenchmarkCompletion, last: Bool) =>
-//     Master(
-//       c,
-//       _workers,
-//       _messages,
-//       _percentage
-//     )
+namespace {
 
-//   fun tag name(): String => "Concurrent Dictionary"
+using namespace std;
 
-// actor Master
-//   let _bench: AsyncBenchmarkCompletion
-//   var _workers: U64
+struct Master;
 
-//   new create(c: AsyncBenchmarkCompletion, workers: U64, messages: U64, percentage: U64) =>
-//     _bench = c
-//     _workers = workers
+struct Dictionary;
 
-//     let dictionary = Dictionary
+struct Worker {
+  cown_ptr<Master> master;
+  uint64_t percentage;
+  cown_ptr<Dictionary> dictionary;
+  SimpleRand random;
+  uint64_t messages;
 
-//     for i in Range[U64](0, workers) do
-//       Worker(this, i,dictionary, messages, percentage).work()
-//     end
-  
-//   be done() =>
-//     if (_workers = _workers - 1) == 1 then
-//       _bench.complete()
-//     end
-    
-// actor Worker
-//   let _master: Master
-//   let _percentage: U64
-//   let _dictionary: Dictionary
-//   let _random: SimpleRand
-//   var _messages: U64
+  Worker(cown_ptr<Master> master, uint64_t index, cown_ptr<Dictionary> dictionary, uint64_t messages, uint64_t percentage):
+    master(master), percentage(percentage), dictionary(dictionary), random(index + messages + percentage), messages(messages) {}
 
-//   new create(master: Master, index: U64, dictionary: Dictionary, messages: U64, percentage: U64) =>
-//     _master = master
-//     _percentage = percentage
-//     _dictionary = dictionary
-//     _random = SimpleRand(index + messages + percentage)
-//     _messages = messages
+  static void work(cown_ptr<Worker> self, uint64_t value = 0);
+};
 
-//   be work(value: U64 = 0) =>
-//     if (_messages = _messages - 1) >= 1 then
-//       var value' = _random.nextInt(where max = 100).u64()
-//       value' = value' % (I64.max_value() / 4096).u64()
+struct Dictionary {
+  unordered_map<uint64_t, uint64_t> map;
+  Dictionary() {}
+  static void write(cown_ptr<Dictionary> self, cown_ptr<Worker> worker, uint64_t key, uint64_t value);
+  static void read(cown_ptr<Dictionary> self, cown_ptr<Worker> worker, uint64_t key);
+};
 
-//       if value' < _percentage then
-//         _dictionary.write(this, value', value')
-//       else
-//         _dictionary.read(this, value')
-//       end
-//     else
-//       _master.done()
-//     end  
+struct Master {
+  uint64_t workers;
+  Master(uint64_t workers): workers(workers) {}
 
-// actor Dictionary
-//   var _map: HashMap[U64, U64, HashEq[U64]]
+  static cown_ptr<Master> make(uint64_t workers, uint64_t messages, uint64_t percentage) {
+    auto master = make_cown<Master>(workers);
+    when(master) << [tag=master, workers, messages, percentage](acquired_cown<Master>) {
 
-//   new create() =>
-//     _map = HashMap[U64, U64, HashEq[U64]](U32.max_value().usize() / 4096)
+      auto dictionary = make_cown<Dictionary>();
 
-//   be write(worker: Worker, key: U64, value: U64) =>
-//     _map(key) = value
-//     worker.work(value)
+      for (uint64_t i = 0; i < workers; ++i) {
+        Worker::work(make_cown<Worker>(tag, i, dictionary, messages, percentage));
+      }
+    };
+    return master;
+  }
 
-//   be read(worker: Worker, key: U64) =>
-//     worker.work(try _map(key) ? else 0 end)
+  static void done(cown_ptr<Master> self) {
+    when(self) << [](acquired_cown<Master> self) {
+      if (self->workers-- == 1) {
+        /* done */
+      }
+    };
+  }
+};
+
+void Worker::work(cown_ptr<Worker> self, uint64_t value) {
+  when(self) << [tag=self, value](acquired_cown<Worker> self) {
+    if (self->messages-- >= 1) {
+      uint64_t value = self->random.nextInt(100);
+      value %= (INT64_MAX / 4096);
+
+      if (value < self->percentage) {
+        Dictionary::write(self->dictionary, tag, value, value);
+      } else {
+        Dictionary::read(self->dictionary, tag, value);
+      }
+    } else {
+      Master::done(self->master);
+    }
+  };
+}
+
+void Dictionary::write(cown_ptr<Dictionary> self, cown_ptr<Worker> worker, uint64_t key, uint64_t value) {
+  when(self) << [worker, key, value](acquired_cown<Dictionary> self) mutable {
+    self->map[key] = value;
+    Worker::work(worker, value);
+  };
+}
+
+void Dictionary::read(cown_ptr<Dictionary> self, cown_ptr<Worker> worker, uint64_t key) {
+  when(self) << [worker, key](acquired_cown<Dictionary> self) {
+    Worker::work(worker, self->map[key]);
+  };
+}
+
+struct Concdict: AsyncBenchmark {
+  uint64_t workers;
+  uint64_t messages;
+  uint64_t percentage;
+
+  Concdict(uint64_t workers, uint64_t messages, uint64_t percentage):
+    workers(workers), messages(messages), percentage(percentage) {};
+
+  void run() {
+    Master::make(workers, messages, percentage);
+  }
+
+  std::string name() { return "Concurrent Dictionary"; }
+
+};
+
+};
+
+};

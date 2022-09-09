@@ -15,11 +15,40 @@ struct AsyncBenchmark {
   virtual ~AsyncBenchmark() {}
 };
 
+struct Writer {
+  virtual void writeHeader()=0;
+  virtual void writeEntry(std::string benchmark, double mean, double median, double error, double stddev)=0;
+};
+
+struct CSVWriter: public Writer {
+  void writeHeader() override {
+    std::cout << "benchmark,mean,median,error,stddev" << std::endl;
+  }
+
+  void writeEntry(std::string benchmark, double mean, double median, double error, double stddev) override {
+    std::cout << benchmark << "," << mean << "," << median << "," << error << "," << stddev << std::endl;
+  }
+};
+
+struct ConsoleWriter: public Writer {
+  void writeHeader() { }
+
+  void writeEntry(std::string benchmark, double mean, double median, double error, double stddev) override {
+    std::cout << benchmark << "   "
+              << mean << " ms   "
+              << median << " ms   "
+              << "+/- " << error << " %   "
+              << stddev
+              << std::endl;
+  }
+};
+
 struct BenchmarkHarness {
   opt::Opt opt;
 
   size_t cores;
   bool detect_leaks;
+  std::unique_ptr<Writer> writer;
 
   BenchmarkHarness(const int argc, const char** argv) : opt(argc, argv) {
     std::cout << "BenchmarkHarness starting." << std::endl;
@@ -37,6 +66,10 @@ struct BenchmarkHarness {
 
     detect_leaks = !opt.has("--allow_leaks");
     Scheduler::set_detect_leaks(detect_leaks);
+
+    writer = opt.has("--csv") ? std::unique_ptr<Writer>{std::make_unique<CSVWriter>()} : std::make_unique<ConsoleWriter>();
+
+    writer->writeHeader();
   }
 
   template<typename T, size_t iterations, typename...Args>
@@ -62,11 +95,6 @@ struct BenchmarkHarness {
         snmalloc::debug_check_empty<snmalloc::Alloc::Config>();
     }
 
-    std::cout << benchmark.name() << "   "
-              << samples.mean() << " ms   "
-              << samples.median() << " ms   "
-              << "+/- " << samples.ref_err() << " %   "
-              << samples.stddev()
-              << std::endl;
+    writer->writeEntry(benchmark.name(), samples.mean(), samples.median(), samples.ref_err(), samples.stddev());
   }
 };
