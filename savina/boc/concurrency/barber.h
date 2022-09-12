@@ -41,7 +41,7 @@ struct Customer { // things that become cowns do not know their own address
 
 struct Barber {
   uint64_t haircut_rate;
-  bool sleeping;
+  bool busy;
 
   Barber(uint64_t haircut_rate): haircut_rate(haircut_rate) {}
 
@@ -75,16 +75,55 @@ static uint64_t BusyWaiter(uint64_t wait) {
   return x;
 }
 
+#define count_v 1
+
 struct WaitingRoom {
   const uint64_t size;
+#ifndef count_v
   std::deque<cown_ptr<Customer>> customers;
-  uint64_t count;
-  // rather than storing the customers, just keep count of how many are waiting and use the barbers message queue as the seats
-  bool barber_sleeps;
+#else
+  uint64_t count = 0;
+#endif
   cown_ptr<Barber> barber;
 
-  WaitingRoom(uint64_t size, cown_ptr<Barber> barber): size(size), count(0), barber_sleeps(true), barber(barber) {}
+  WaitingRoom(uint64_t size, cown_ptr<Barber> barber): size(size), barber(barber) {}
 
+#ifndef count_v
+  static void enter(cown_ptr<WaitingRoom> wr, cown_ptr<Customer> customer) {
+    when(wr) << [customer, tag=wr](acquired_cown<WaitingRoom> wr) {
+      if (wr->customers.size() == wr->size) {
+        Customer::full(customer);
+      } else {
+        wr->customers.push_back(customer);
+
+        WaitingRoom::next(tag, wr->barber);
+      }
+    };
+  }
+
+  static void next(cown_ptr<WaitingRoom> wr, cown_ptr<Barber> barber) {
+    when(wr, barber) << [wr_tag=wr, barber_tag=barber](acquired_cown<WaitingRoom> wr, acquired_cown<Barber> barber) {
+      if(!barber->busy) {
+        if (wr->customers.size() > 0) {
+          cown_ptr<Customer> customer = wr->customers.front();
+          wr->customers.pop_front();
+          // barber->sleeping = false;
+          barber->busy = true;
+
+          when(barber_tag, customer) << [wr_tag, barber_tag, customer_tag=customer](acquired_cown<Barber> barber, acquired_cown<Customer> customer) {
+            customer->sit_down();
+            BusyWaiter(Rand(12345).integer(barber->haircut_rate) + 10);
+            customer->pay_and_leave(customer_tag);
+            barber->busy = false;
+            WaitingRoom::next(wr_tag, barber_tag);
+          };
+        } else if (wr->customers.size() == 0) {
+          // barber->sleeping = true;
+        }
+      }
+    };
+  }
+#else
   static void enter(cown_ptr<WaitingRoom> self, cown_ptr<Customer> customer) {
     when(self) << [customer, tag=self](acquired_cown<WaitingRoom> self) {
       if (self->count == self->size) {
@@ -95,18 +134,19 @@ struct WaitingRoom {
         when(self->barber, customer) << [wr_tag=tag, barber_tag=self->barber, customer_tag=customer](acquired_cown<Barber> barber, acquired_cown<Customer> customer) {
           when(wr_tag) << [](acquired_cown<WaitingRoom> wr) { wr->count--; };
 
-          barber->sleeping = false;
+          // barber->sleeping = false;
           customer->sit_down();
           BusyWaiter(Rand(12345).integer(barber->haircut_rate) + 10);
           customer->pay_and_leave(customer_tag);
 
           when(barber_tag, wr_tag) << [](acquired_cown<Barber> barber, acquired_cown<WaitingRoom> wr) {
-            barber->sleeping = wr->count == 0;
+            // barber->sleeping = wr->count == 0;
           };
         };
       }
     };
   }
+#endif
 };
 
 void Barber::wait(cown_ptr<Barber> self) { when(self) << [](acquired_cown<Barber>){}; }
@@ -123,6 +163,7 @@ void CustomerFactory::left(cown_ptr<CustomerFactory> self, cown_ptr<Customer> cu
   when(self) << [](acquired_cown<CustomerFactory> self) {
     self->number_of_haircuts--;
     if (self->number_of_haircuts == 0) {
+      std::cout << "attempts: " << self->attempts << std::endl;
       return;
     }
   };
