@@ -33,7 +33,7 @@ struct Customer { // things that become cowns do not know their own address
 
   Customer(cown_ptr<CustomerFactory> factory): factory(factory) {}
 
-  // void full(cown_ptr<Customer>);
+  static void full(cown_ptr<Customer>);
   void pay_and_leave(cown_ptr<Customer>);
   void wait();
   void sit_down() {};
@@ -41,6 +41,7 @@ struct Customer { // things that become cowns do not know their own address
 
 struct Barber {
   uint64_t haircut_rate;
+  bool sleeping;
 
   Barber(uint64_t haircut_rate): haircut_rate(haircut_rate) {}
 
@@ -75,48 +76,34 @@ static uint64_t BusyWaiter(uint64_t wait) {
 }
 
 struct WaitingRoom {
-  uint64_t size;
+  const uint64_t size;
   std::deque<cown_ptr<Customer>> customers;
+  uint64_t count;
+  // rather than storing the customers, just keep count of how many are waiting and use the barbers message queue as the seats
   bool barber_sleeps;
   cown_ptr<Barber> barber;
 
-  WaitingRoom(uint64_t size, cown_ptr<Barber> barber): size(size), barber_sleeps(true), barber(barber) {}
+  WaitingRoom(uint64_t size, cown_ptr<Barber> barber): size(size), count(0), barber_sleeps(true), barber(barber) {}
 
   static void enter(cown_ptr<WaitingRoom> self, cown_ptr<Customer> customer) {
-    when(self, customer) << [customer_tag=customer, tag=self](acquired_cown<WaitingRoom> self, acquired_cown<Customer> customer) {
-      if (self->customers.size() == self->size) {
-        // customer->full(customer_tag);
-        CustomerFactory::returned(customer->factory, customer_tag);
+    when(self) << [customer, tag=self](acquired_cown<WaitingRoom> self) {
+      if (self->count == self->size) {
+        Customer::full(customer);
       } else {
-        self->customers.push_back(customer_tag);
+        self->count++;
 
-        if (self->barber_sleeps) {
-          self->barber_sleeps = false;
-          WaitingRoom::next(tag);
-        } else {
-          customer->wait();
-        }
-      }
-    };
-  }
+        when(self->barber, customer) << [wr_tag=tag, barber_tag=self->barber, customer_tag=customer](acquired_cown<Barber> barber, acquired_cown<Customer> customer) {
+          when(wr_tag) << [](acquired_cown<WaitingRoom> wr) { wr->count--; };
 
-// joining on the barber and customer is conceptually what is intended but this design is not an improvement,
-// previously the barber did some busy waiting, which would dominate, but the remainder was spawning messages.
-// the customer methods as part of the behaviour make it longer ... however i sippose it shows the swap in mentallity isn't awful?
-  static void next(cown_ptr<WaitingRoom> self) {
-    when(self) << [tag=self](acquired_cown<WaitingRoom> self) {
-      if (self->customers.size() > 0) {
-        auto customer = self->customers.front();
-        when(self->barber, customer) << [tag, customer_tag=customer](acquired_cown<Barber> barber, acquired_cown<Customer> customer) {
+          barber->sleeping = false;
           customer->sit_down();
           BusyWaiter(Rand(12345).integer(barber->haircut_rate) + 10);
           customer->pay_and_leave(customer_tag);
-          WaitingRoom::next(tag);
+
+          when(barber_tag, wr_tag) << [](acquired_cown<Barber> barber, acquired_cown<WaitingRoom> wr) {
+            barber->sleeping = wr->count == 0;
+          };
         };
-        self->customers.pop_front();
-      } else {
-        Barber::wait(self->barber);
-        self->barber_sleeps = true;
       }
     };
   }
@@ -151,7 +138,7 @@ void CustomerFactory::run(cown_ptr<CustomerFactory> self, uint64_t rate) {
   };
 }
 
-// void Customer::full(cown_ptr<Customer> self) { CustomerFactory::returned(factory, self); }
+void Customer::full(cown_ptr<Customer> self) { when(self) << [tag=self](acquired_cown<Customer> self){ CustomerFactory::returned(self->factory, tag); }; }
 
 void Customer::wait() { }
 
