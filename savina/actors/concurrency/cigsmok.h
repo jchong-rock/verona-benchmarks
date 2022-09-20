@@ -3,9 +3,9 @@
 #include <cpp/when.h>
 #include "util/bench.h"
 
-namespace ActorBenchmark {
+namespace actor_benchmark {
 
-namespace {
+namespace cigsmok {
 
 using verona::cpp::make_cown;
 using verona::cpp::cown_ptr;
@@ -67,6 +67,8 @@ void Smoker::smoke(cown_ptr<Smoker> self, uint64_t period) {
   };
 }
 
+};
+
 struct Cigsmok: public AsyncBenchmark {
   uint64_t rounds;
   uint64_t smokers;
@@ -74,14 +76,12 @@ struct Cigsmok: public AsyncBenchmark {
   Cigsmok(uint64_t rounds, uint64_t smokers): rounds(rounds), smokers(smokers) {};
 
   void run() {
-    cown_ptr<Arbiter> arbiter = make_cown<Arbiter>(rounds);
-    Arbiter::add_smokers(arbiter, smokers);
-    Arbiter::notify_smoker(arbiter);
+    cown_ptr<cigsmok::Arbiter> arbiter = make_cown<cigsmok::Arbiter>(rounds);
+    cigsmok::Arbiter::add_smokers(arbiter, smokers);
+    cigsmok::Arbiter::notify_smoker(arbiter);
   }
 
   std::string name() { return "Cigarette Smokers"; }
-};
-
 };
 
 };

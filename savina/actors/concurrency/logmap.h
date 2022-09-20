@@ -1,9 +1,9 @@
 #include "util/bench.h"
 #include "util/random.h"
 
-namespace ActorBenchmark {
+namespace actor_benchmark {
 
-namespace {
+namespace logmap {
 
 using namespace std;
 
@@ -145,6 +145,8 @@ void SeriesWorker::get(cown_ptr<SeriesWorker> self) {
   };
 }
 
+};
+
 struct Logmap: public AsyncBenchmark {
   uint64_t terms;
   uint64_t series;
@@ -154,12 +156,11 @@ struct Logmap: public AsyncBenchmark {
   Logmap(uint64_t terms, uint64_t series, double rate, double increment): terms(terms), series(series), rate(rate), increment(increment) {}
 
   void run() {
+    using namespace logmap;
     LogmapMaster::start(LogmapMaster::make(terms, series, rate, increment));
   }
 
   std::string name() { return "Logistic Map Series"; }
-
-};
 
 };
 

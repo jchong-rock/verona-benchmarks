@@ -1,9 +1,9 @@
 #include "util/bench.h"
 #include "util/random.h"
 
-namespace BOCBenchmark {
+namespace boc_benchmark {
 
-namespace {
+namespace banking {
 
 /*
  * The original bank required stashing and agreement for 2PC between banks
@@ -79,6 +79,8 @@ struct Teller {
   }
 };
 
+};
+
 struct Banking: public AsyncBenchmark {
   uint64_t accounts;
   uint64_t transactions;
@@ -89,12 +91,12 @@ struct Banking: public AsyncBenchmark {
   }
 
   void run() {
+    using namespace banking;
     Teller::spawn_transactions(make_cown<Teller>(initial, accounts, transactions));
   }
 
   std::string name() { return "Banking"; }
 };
 
-};
 
 };

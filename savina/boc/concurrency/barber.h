@@ -4,9 +4,9 @@
 #include "util/bench.h"
 #include <random>
 
-namespace BOCBenchmark {
+namespace boc_benchmark {
 
-namespace {
+namespace barber {
 
 using namespace verona::cpp;
 using namespace std;
@@ -46,21 +46,6 @@ struct Barber {
   Barber(uint64_t haircut_rate): haircut_rate(haircut_rate) {}
 
   static void wait(cown_ptr<Barber>);
-};
-
-struct SleepingBarber: public AsyncBenchmark {
-  uint64_t haircuts;
-  uint64_t room;
-  uint64_t production;
-  uint64_t cut;
-
-  SleepingBarber(uint64_t haircuts, uint64_t room, uint64_t production, uint64_t cut): haircuts(haircuts), room(room), production(production), cut(cut) {}
-
-  void run() {
-    CustomerFactory::run(make_cown<CustomerFactory>(haircuts, make_cown<WaitingRoom>(room, make_cown<Barber>(cut))), production);
-  }
-
-  std::string name() { return "Sleeping Barber"; }
 };
 
 static uint64_t BusyWaiter(uint64_t wait) {
@@ -318,5 +303,22 @@ void Customer::pay_and_leave(cown_ptr<Customer> self) { CustomerFactory::left(fa
 #endif
 
 };
+
+struct SleepingBarber: public AsyncBenchmark {
+  uint64_t haircuts;
+  uint64_t room;
+  uint64_t production;
+  uint64_t cut;
+
+  SleepingBarber(uint64_t haircuts, uint64_t room, uint64_t production, uint64_t cut): haircuts(haircuts), room(room), production(production), cut(cut) {}
+
+  void run() {
+    using namespace barber;
+    CustomerFactory::run(make_cown<CustomerFactory>(haircuts, make_cown<WaitingRoom>(room, make_cown<Barber>(cut))), production);
+  }
+
+  std::string name() { return "Sleeping Barber"; }
+};
+
 
 };

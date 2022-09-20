@@ -8,9 +8,9 @@
 #include "util/bench.h"
 #include <random>
 
-namespace ActorBenchmark {
+namespace actor_benchmark {
 
-namespace {
+namespace bndbuffer {
 
 struct Producer;
 struct Consumer;
@@ -162,6 +162,9 @@ void Manager::exit(cown_ptr<Manager> self) {
   };
 }
 
+};
+
+
 struct BndBuffer: public AsyncBenchmark {
   const uint64_t buffersize;
   const uint64_t producers;
@@ -174,12 +177,10 @@ struct BndBuffer: public AsyncBenchmark {
     buffersize(buffersize), producers(producers), consumers(consumers), items(items), producercosts(producercosts), consumercosts(consumercosts) {}
 
   void run() {
-    Manager::make_manager(buffersize, producers, consumers, items, producercosts, consumercosts);
+    bndbuffer::Manager::make_manager(buffersize, producers, consumers, items, producercosts, consumercosts);
   }
 
   std::string name() { return "Bounded Buffer"; }
-};
-
 };
 
 };

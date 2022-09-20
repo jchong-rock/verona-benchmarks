@@ -3,9 +3,9 @@
 #include <cpp/when.h>
 #include "util/bench.h"
 
-namespace ActorBenchmark {
+namespace actor_benchmark {
 
-namespace {
+namespace philosopher {
 
 using verona::cpp::make_cown;
 using verona::cpp::cown_ptr;
@@ -90,6 +90,8 @@ void Philosopher::eat(cown_ptr<Philosopher> self) {
   };
 }
 
+};
+
 struct DiningPhilosophers: public AsyncBenchmark {
   uint64_t philosophers;
   uint64_t rounds;
@@ -98,6 +100,8 @@ struct DiningPhilosophers: public AsyncBenchmark {
   DiningPhilosophers(uint64_t philosophers, uint64_t rounds, uint64_t channels): philosophers(philosophers), rounds(rounds), channels(channels) {}
 
   void run() {
+    using namespace philosopher;
+
     cown_ptr<Arbitator> arbitator = make_cown<Arbitator>(philosophers);
     std::vector<cown_ptr<Philosopher>> actors;
 
@@ -111,8 +115,6 @@ struct DiningPhilosophers: public AsyncBenchmark {
   }
 
   std::string name() { return "Dining Philosophers"; }
-};
-
 };
 
 };

@@ -13,9 +13,9 @@
 // and pending producers and then creating a rendezvous between
 // a producer and consumer
 
-namespace BOCBenchmark {
+namespace boc_benchmark {
 
-namespace {
+namespace bndbuffer {
 
 using namespace std;
 
@@ -177,23 +177,6 @@ void Manager::exit(cown_ptr<Manager> self) {
   };
 }
 
-struct BndBuffer: public AsyncBenchmark {
-  const uint64_t buffersize;
-  const uint64_t producers;
-  const uint64_t consumers;
-  const uint64_t items;
-  const uint64_t producercosts;
-  const uint64_t consumercosts;
-
-  BndBuffer(uint64_t buffersize, uint64_t producers, uint64_t consumers, uint64_t items, uint64_t producercosts, uint64_t consumercosts):
-    buffersize(buffersize), producers(producers), consumers(consumers), items(items), producercosts(producercosts), consumercosts(consumercosts) {}
-
-  void run() {
-    Manager::make_manager(buffersize, producers, consumers, items, producercosts, consumercosts);
-  }
-
-  std::string name() { return "Bounded Buffer"; }
-};
 #else
 
 // This is also not helpful, if we're not doing a rendezvous then we can do it with actors
@@ -350,6 +333,24 @@ struct BndBuffer: public AsyncBenchmark {
 };
 
 #endif
+};
+
+struct BndBuffer: public AsyncBenchmark {
+  const uint64_t buffersize;
+  const uint64_t producers;
+  const uint64_t consumers;
+  const uint64_t items;
+  const uint64_t producercosts;
+  const uint64_t consumercosts;
+
+  BndBuffer(uint64_t buffersize, uint64_t producers, uint64_t consumers, uint64_t items, uint64_t producercosts, uint64_t consumercosts):
+    buffersize(buffersize), producers(producers), consumers(consumers), items(items), producercosts(producercosts), consumercosts(consumercosts) {}
+
+  void run() {
+    bndbuffer::Manager::make_manager(buffersize, producers, consumers, items, producercosts, consumercosts);
+  }
+
+  std::string name() { return "Bounded Buffer"; }
 };
 
 };

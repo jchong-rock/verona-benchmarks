@@ -2,9 +2,9 @@
 #include "util/random.h"
 #include <list>
 
-namespace ActorBenchmark {
+namespace actor_benchmark {
 
-namespace {
+namespace concsll {
 
 using namespace std;
 
@@ -36,73 +36,73 @@ struct SortedLinkedList {
   }
 };
 
-struct ListMaster;
+struct Master;
 struct SortedList;
 
-struct ListWorker {
-  cown_ptr<ListMaster> listmaster;
+struct Worker {
+  cown_ptr<Master> master;
   uint64_t size;
   uint64_t write;
   cown_ptr<SortedList> list;
   SimpleRand random;
   uint64_t messages;
 
-  ListWorker(cown_ptr<ListMaster> listmaster, uint64_t messages, uint64_t size, uint64_t write, cown_ptr<SortedList> list):
-    listmaster(listmaster), size(size), write(write), list(list), random(messages + size + write), messages(messages) {}
+  Worker(cown_ptr<Master> master, uint64_t messages, uint64_t size, uint64_t write, cown_ptr<SortedList> list):
+    master(master), size(size), write(write), list(list), random(messages + size + write), messages(messages) {}
 
-  static void work(cown_ptr<ListWorker>, uint64_t value = 0);
+  static void work(cown_ptr<Worker>, uint64_t value = 0);
 };
 
 struct SortedList {
   SortedLinkedList<uint64_t> data;
 
-  static void write(cown_ptr<SortedList> self, cown_ptr<ListWorker> listworker, uint64_t value) {
-    when(self) << [listworker, value](acquired_cown<SortedList> self) {
+  static void write(cown_ptr<SortedList> self, cown_ptr<Worker> worker, uint64_t value) {
+    when(self) << [worker, value](acquired_cown<SortedList> self) {
       self->data.push(value);
-      ListWorker::work(listworker, value);
+      Worker::work(worker, value);
     };
   }
 
-  static void contains(cown_ptr<SortedList> self, cown_ptr<ListWorker> listworker, uint64_t value) {
-    when(self) << [listworker, value](acquired_cown<SortedList> self) {
-      ListWorker::work(listworker, self->data.contains(value) ? 0 : 1);
+  static void contains(cown_ptr<SortedList> self, cown_ptr<Worker> worker, uint64_t value) {
+    when(self) << [worker, value](acquired_cown<SortedList> self) {
+      Worker::work(worker, self->data.contains(value) ? 0 : 1);
     };
   }
 
-  static void size(cown_ptr<SortedList> self, cown_ptr<ListWorker> listworker) {
-    when(self) << [listworker](acquired_cown<SortedList> self) {
-      ListWorker::work(listworker, self->data.size());
+  static void size(cown_ptr<SortedList> self, cown_ptr<Worker> worker) {
+    when(self) << [worker](acquired_cown<SortedList> self) {
+      Worker::work(worker, self->data.size());
     };
   }
 };
 
-struct ListMaster {
-  uint64_t listworkers;
+struct Master {
+  uint64_t workers;
   cown_ptr<SortedList> list;
 
-  ListMaster(uint64_t listworkers, cown_ptr<SortedList> list): listworkers(listworkers), list(list) {}
+  Master(uint64_t workers, cown_ptr<SortedList> list): workers(workers), list(list) {}
 
-  static void make(uint64_t listworkers, uint64_t messages, uint64_t size, uint64_t write) {
+  static void make(uint64_t workers, uint64_t messages, uint64_t size, uint64_t write) {
     cown_ptr<SortedList> list = make_cown<SortedList>();
 
-    cown_ptr<ListMaster> listmaster = make_cown<ListMaster>(listworkers, list);
+    cown_ptr<Master> master = make_cown<Master>(workers, list);
 
-    for (uint64_t i = 0; i < listworkers; ++i) {
-      ListWorker::work(make_cown<ListWorker>(listmaster, messages, size, write, list));
+    for (uint64_t i = 0; i < workers; ++i) {
+      Worker::work(make_cown<Worker>(master, messages, size, write, list));
     }
   }
 
-  static void done(cown_ptr<ListMaster> self) {
-    when(self) << [](acquired_cown<ListMaster> self) {
-      if (--self->listworkers == 0) {
+  static void done(cown_ptr<Master> self) {
+    when(self) << [](acquired_cown<Master> self) {
+      if (--self->workers == 0) {
         /* done */
       }
     };
   }
 };
 
-void ListWorker::work(cown_ptr<ListWorker> self, uint64_t value) {
-  when(self) << [tag=self, value](acquired_cown<ListWorker> self) {
+void Worker::work(cown_ptr<Worker> self, uint64_t value) {
+  when(self) << [tag=self, value](acquired_cown<Worker> self) {
     if (--self->messages > 0) {
       uint64_t value2 = self->random.nextInt(100);
 
@@ -114,27 +114,29 @@ void ListWorker::work(cown_ptr<ListWorker> self, uint64_t value) {
         SortedList::contains(self->list, tag, value2);
       }
     } else {
-      ListMaster::done(self->listmaster);
+      Master::done(self->master);
     }
   };
 }
 
+};
+
+
 struct Concsll: public AsyncBenchmark {
-  uint64_t listworkers;
+  uint64_t workers;
   uint64_t messages;
   uint64_t size;
   uint64_t write;
 
-  Concsll(uint64_t listworkers, uint64_t messages, uint64_t size, uint64_t write):
-    listworkers(listworkers), messages(messages), size(size), write(write) {}
+  Concsll(uint64_t workers, uint64_t messages, uint64_t size, uint64_t write):
+    workers(workers), messages(messages), size(size), write(write) {}
 
   void run() {
-    ListMaster::make(listworkers, messages, size, write);
+    concsll::Master::make(workers, messages, size, write);
   }
 
   std::string name() { return "Concurrent Sorted Linked-List"; }
 };
 
-};
 
 };

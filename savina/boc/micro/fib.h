@@ -5,9 +5,9 @@
 #include <random>
 #include <variant>
 
-namespace BOCBenchmark {
+namespace boc_benchmark {
 
-namespace {
+namespace fib {
 
 using namespace std;
 
@@ -28,16 +28,16 @@ struct Fibonacci {
 
 };
 
+};
+
 struct Fib: public AsyncBenchmark {
   uint64_t index;
 
   Fib(uint64_t index): index(index) {}
 
-  void run() { Fibonacci::compute(index); }
+  void run() { fib::Fibonacci::compute(index); }
 
-  string name() { return "Fib"; }
-
-};
+  std::string name() { return "Fib"; }
 
 };
 

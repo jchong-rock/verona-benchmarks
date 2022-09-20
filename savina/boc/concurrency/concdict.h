@@ -1,9 +1,9 @@
 #include "util/bench.h"
 #include "util/random.h"
 
-namespace BOCBenchmark {
+namespace boc_benchmark {
 
-namespace {
+namespace concdict {
 
 using namespace std;
 
@@ -93,6 +93,8 @@ void Dictionary::read(cown_ptr<Dictionary> self, cown_ptr<Worker> worker, uint64
   };
 }
 
+};
+
 struct Concdict: AsyncBenchmark {
   uint64_t workers;
   uint64_t messages;
@@ -102,13 +104,10 @@ struct Concdict: AsyncBenchmark {
     workers(workers), messages(messages), percentage(percentage) {};
 
   void run() {
-    Master::make(workers, messages, percentage);
+    concdict::Master::make(workers, messages, percentage);
   }
 
   std::string name() { return "Concurrent Dictionary"; }
-
-};
-
 };
 
 };

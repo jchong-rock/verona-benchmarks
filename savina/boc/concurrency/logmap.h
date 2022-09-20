@@ -1,9 +1,9 @@
 #include "util/bench.h"
 #include "util/random.h"
 
-namespace BOCBenchmark {
+namespace boc_benchmark {
 
-namespace {
+namespace logmap {
 
 using namespace std;
 
@@ -54,6 +54,8 @@ namespace LogmapMaster {
   }
 };
 
+};
+
 struct Logmap: public AsyncBenchmark {
   uint64_t terms;
   uint64_t series;
@@ -63,12 +65,10 @@ struct Logmap: public AsyncBenchmark {
   Logmap(uint64_t terms, uint64_t series, double rate, double increment): terms(terms), series(series), rate(rate), increment(increment) {}
 
   void run() {
-    LogmapMaster::start(terms, series, rate, increment);
+    logmap::LogmapMaster::start(terms, series, rate, increment);
   }
 
   std::string name() { return "Logistic Map Series"; }
-
-};
 
 };
 

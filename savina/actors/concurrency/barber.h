@@ -5,9 +5,9 @@
 #include <random>
 #include <chrono>
 
-namespace ActorBenchmark {
+namespace actor_benchmark {
 
-namespace {
+namespace barber {
 
 using namespace verona::cpp;
 using namespace std;
@@ -47,21 +47,6 @@ struct Barber {
 
   static void enter(cown_ptr<Barber>, cown_ptr<Customer>, cown_ptr<WaitingRoom>);
   static void wait(cown_ptr<Barber>);
-};
-
-struct SleepingBarber: public AsyncBenchmark {
-  uint64_t haircuts;
-  uint64_t room;
-  uint64_t production;
-  uint64_t cut;
-
-  SleepingBarber(uint64_t haircuts, uint64_t room, uint64_t production, uint64_t cut): haircuts(haircuts), room(room), production(production), cut(cut) {}
-
-  void run() {
-    CustomerFactory::run(make_cown<CustomerFactory>(haircuts, make_cown<WaitingRoom>(room, make_cown<Barber>(cut))), production);
-  }
-
-  std::string name() { return "Sleeping Barber"; }
 };
 
 struct WaitingRoom {
@@ -158,6 +143,21 @@ void Customer::sit_down(cown_ptr<Customer> self) { when(self) << [](acquired_cow
 
 void Customer::pay_and_leave(cown_ptr<Customer> self) { when(self) << [tag=self](acquired_cown<Customer> self){ CustomerFactory::left(self->factory, tag); }; }
 
+};
+
+struct SleepingBarber: public AsyncBenchmark {
+  uint64_t haircuts;
+  uint64_t room;
+  uint64_t production;
+  uint64_t cut;
+
+  SleepingBarber(uint64_t haircuts, uint64_t room, uint64_t production, uint64_t cut): haircuts(haircuts), room(room), production(production), cut(cut) {}
+
+  void run() {
+    barber::CustomerFactory::run(make_cown<barber::CustomerFactory>(haircuts, make_cown<barber::WaitingRoom>(room, make_cown<barber::Barber>(cut))), production);
+  }
+
+  std::string name() { return "Sleeping Barber"; }
 };
 
 };

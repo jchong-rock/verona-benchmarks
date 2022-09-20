@@ -1,9 +1,9 @@
 #include "util/bench.h"
 #include "util/random.h"
 
-namespace ActorBenchmark {
+namespace actor_benchmark {
 
-namespace {
+namespace banking {
 
 struct Account;
 struct Teller;
@@ -124,6 +124,8 @@ void Account::reply(cown_ptr<Account> self, cown_ptr<Teller> teller) {
   };
 }
 
+};
+
 struct Banking: public AsyncBenchmark {
   uint64_t accounts;
   uint64_t transactions;
@@ -134,12 +136,10 @@ struct Banking: public AsyncBenchmark {
   }
 
   void run() {
-    Teller::spawn_transactions(make_cown<Teller>(initial, accounts, transactions));
+    banking::Teller::spawn_transactions(make_cown<banking::Teller>(initial, accounts, transactions));
   }
 
   std::string name() { return "Banking"; }
-};
-
 };
 
 };

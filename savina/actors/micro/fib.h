@@ -5,9 +5,9 @@
 #include <random>
 #include <variant>
 
-namespace ActorBenchmark {
+namespace actor_benchmark {
 
-namespace {
+namespace fib {
 
 using namespace std;
 
@@ -58,17 +58,18 @@ struct Fibonacci {
 
 };
 
+};
+
 struct Fib: public AsyncBenchmark {
   uint64_t index;
 
   Fib(uint64_t index): index(index) {}
 
-  void run() { Fibonacci::root(index); }
+  void run() { fib::Fibonacci::root(index); }
 
-  string name() { return "Fib"; }
-
-};
+  std::string name() { return "Fib"; }
 
 };
+
 
 };
