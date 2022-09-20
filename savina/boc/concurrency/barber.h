@@ -8,9 +8,140 @@ namespace BOCBenchmark {
 
 namespace {
 
-using verona::cpp::make_cown;
-using verona::cpp::cown_ptr;
-using verona::cpp::acquired_cown;
+using namespace verona::cpp;
+using namespace std;
+
+#if true
+
+struct Customer;
+struct WaitingRoom;
+
+struct CustomerFactory {
+  uint64_t number_of_haircuts;
+  uint64_t attempts;
+  cown_ptr<WaitingRoom> room;
+
+  CustomerFactory(uint64_t number_of_haircuts, cown_ptr<WaitingRoom> room):
+    number_of_haircuts(number_of_haircuts), attempts(0), room(room) {}
+
+  static void run(cown_ptr<CustomerFactory>, uint64_t);
+  static void returned(cown_ptr<CustomerFactory>, unique_ptr<Customer>);
+  static void left(cown_ptr<CustomerFactory>, unique_ptr<Customer>);
+};
+
+struct Customer {
+  cown_ptr<CustomerFactory> factory;
+
+  Customer(cown_ptr<CustomerFactory> factory): factory(factory) {}
+
+  static void full(unique_ptr<Customer>);
+  static void pay_and_leave(unique_ptr<Customer>);
+  // void wait();
+  // void sit_down() {};
+};
+
+struct Barber {
+  uint64_t haircut_rate;
+
+  Barber(uint64_t haircut_rate): haircut_rate(haircut_rate) {}
+
+  static void wait(cown_ptr<Barber>);
+};
+
+struct SleepingBarber: public AsyncBenchmark {
+  uint64_t haircuts;
+  uint64_t room;
+  uint64_t production;
+  uint64_t cut;
+
+  SleepingBarber(uint64_t haircuts, uint64_t room, uint64_t production, uint64_t cut): haircuts(haircuts), room(room), production(production), cut(cut) {}
+
+  void run() {
+    CustomerFactory::run(make_cown<CustomerFactory>(haircuts, make_cown<WaitingRoom>(room, make_cown<Barber>(cut))), production);
+  }
+
+  std::string name() { return "Sleeping Barber"; }
+};
+
+static uint64_t BusyWaiter(uint64_t wait) {
+  uint64_t x = 0;
+
+  for (uint64_t i = 0; i < wait; ++i) {
+    Rand().next();
+    x++;
+  }
+
+  return x;
+}
+
+struct WaitingRoom {
+  const uint64_t size;
+  std::deque<unique_ptr<Customer>> customers;
+  cown_ptr<Barber> barber;
+
+  WaitingRoom(uint64_t size, cown_ptr<Barber> barber): size(size), barber(barber) {}
+
+  static void enter(cown_ptr<WaitingRoom> wr, unique_ptr<Customer> customer) {
+    when(wr) << [tag=wr, customer=move(customer)](acquired_cown<WaitingRoom> wr) mutable {
+      if (wr->customers.size() == wr->size) {
+        Customer::full(move(customer));
+      } else {
+        wr->customers.push_back(move(customer));
+        WaitingRoom::next(tag, wr->barber);
+      }
+    };
+  }
+
+  static void next(cown_ptr<WaitingRoom> wr, cown_ptr<Barber> barber) {
+    // starves a customer waiting to sit down
+    when(wr, barber) << [wr_tag=wr, barber_tag=barber](acquired_cown<WaitingRoom> wr, acquired_cown<Barber> barber) mutable {
+      if (wr->customers.size() > 0) {
+        unique_ptr<Customer> customer = move(wr->customers.front());
+        wr->customers.pop_front();
+
+        BusyWaiter(Rand(time_point_cast<nanoseconds>(system_clock::now()).time_since_epoch().count()).integer(barber->haircut_rate) + 10);
+        Customer::pay_and_leave(move(customer));
+        WaitingRoom::next(wr_tag, barber_tag);
+      }
+    };
+  }
+};
+
+void Barber::wait(cown_ptr<Barber> self) { when(self) << [](acquired_cown<Barber>){}; }
+
+void CustomerFactory::returned(cown_ptr<CustomerFactory> factory, unique_ptr<Customer> customer) {
+  when(factory) << [customer=move(customer)](acquired_cown<CustomerFactory> factory) mutable {
+    factory->attempts++;
+    WaitingRoom::enter(factory->room, move(customer));
+  };
+}
+
+// TODO: in verona we don't need to send a message back to the framework
+void CustomerFactory::left(cown_ptr<CustomerFactory> factory, unique_ptr<Customer> customer) {
+  when(factory) << [](acquired_cown<CustomerFactory> factory) {
+    factory->number_of_haircuts--;
+    if (factory->number_of_haircuts == 0) {
+      // std::cout << "attempts: " << factory->attempts << std::endl;
+      return;
+    }
+  };
+}
+
+void CustomerFactory::run(cown_ptr<CustomerFactory> factory, uint64_t rate) {
+  when(factory) << [tag=factory, rate](acquired_cown<CustomerFactory> factory) mutable {
+    for (uint64_t i = 0; i < factory->number_of_haircuts; ++i) {
+      factory->attempts++;
+      WaitingRoom::enter(factory->room, make_unique<Customer>(tag));
+      BusyWaiter(Rand(time_point_cast<nanoseconds>(system_clock::now()).time_since_epoch().count()).integer(rate) + 10);
+    }
+  };
+}
+
+void Customer::full(unique_ptr<Customer> customer) { auto factory = customer->factory; CustomerFactory::returned(factory, move(customer)); }
+
+void Customer::pay_and_leave(unique_ptr<Customer> customer) { auto factory = customer->factory; CustomerFactory::left(factory, move(customer)); }
+
+#else
 
 struct Customer;
 struct WaitingRoom;
@@ -75,11 +206,11 @@ static uint64_t BusyWaiter(uint64_t wait) {
   return x;
 }
 
-#define count_v 1
+// #define countversion
 
 struct WaitingRoom {
   const uint64_t size;
-#ifndef count_v
+#ifndef countversion
   std::deque<cown_ptr<Customer>> customers;
 #else
   uint64_t count = 0;
@@ -88,7 +219,7 @@ struct WaitingRoom {
 
   WaitingRoom(uint64_t size, cown_ptr<Barber> barber): size(size), barber(barber) {}
 
-#ifndef count_v
+#ifndef countversion
   static void enter(cown_ptr<WaitingRoom> wr, cown_ptr<Customer> customer) {
     when(wr) << [customer, tag=wr](acquired_cown<WaitingRoom> wr) {
       if (wr->customers.size() == wr->size) {
@@ -112,7 +243,7 @@ struct WaitingRoom {
 
           when(barber_tag, customer) << [wr_tag, barber_tag, customer_tag=customer](acquired_cown<Barber> barber, acquired_cown<Customer> customer) {
             customer->sit_down();
-            BusyWaiter(Rand(12345).integer(barber->haircut_rate) + 10);
+            BusyWaiter(Rand(time_point_cast<nanoseconds>(system_clock::now()).time_since_epoch().count()).integer(barber->haircut_rate) + 10);
             customer->pay_and_leave(customer_tag);
             barber->busy = false;
             WaitingRoom::next(wr_tag, barber_tag);
@@ -124,19 +255,19 @@ struct WaitingRoom {
     };
   }
 #else
-  static void enter(cown_ptr<WaitingRoom> self, cown_ptr<Customer> customer) {
-    when(self) << [customer, tag=self](acquired_cown<WaitingRoom> self) {
-      if (self->count == self->size) {
+  static void enter(cown_ptr<WaitingRoom> wr, cown_ptr<Customer> customer) {
+    when(wr) << [customer, tag=wr](acquired_cown<WaitingRoom> wr) {
+      if (wr->count == wr->size) {
         Customer::full(customer);
       } else {
-        self->count++;
+        wr->count++;
 
-        when(self->barber, customer) << [wr_tag=tag, barber_tag=self->barber, customer_tag=customer](acquired_cown<Barber> barber, acquired_cown<Customer> customer) {
+        when(wr->barber, customer) << [wr_tag=tag, barber_tag=wr->barber, customer_tag=customer](acquired_cown<Barber> barber, acquired_cown<Customer> customer) {
           when(wr_tag) << [](acquired_cown<WaitingRoom> wr) { wr->count--; };
 
           // barber->sleeping = false;
           customer->sit_down();
-          BusyWaiter(Rand(12345).integer(barber->haircut_rate) + 10);
+          BusyWaiter(Rand(time_point_cast<nanoseconds>(system_clock::now()).time_since_epoch().count()).integer(barber->haircut_rate) + 10);
           customer->pay_and_leave(customer_tag);
 
           when(barber_tag, wr_tag) << [](acquired_cown<Barber> barber, acquired_cown<WaitingRoom> wr) {
@@ -174,7 +305,7 @@ void CustomerFactory::run(cown_ptr<CustomerFactory> self, uint64_t rate) {
     for (uint64_t i = 0; i < self->number_of_haircuts; ++i) {
       self->attempts++;
       WaitingRoom::enter(self->room, make_cown<Customer>(tag));
-      BusyWaiter(Rand(12345).integer(rate) + 10);
+      BusyWaiter(Rand(time_point_cast<nanoseconds>(system_clock::now()).time_since_epoch().count()).integer(rate) + 10);
     }
   };
 }
@@ -184,6 +315,7 @@ void Customer::full(cown_ptr<Customer> self) { when(self) << [tag=self](acquired
 void Customer::wait() { }
 
 void Customer::pay_and_leave(cown_ptr<Customer> self) { CustomerFactory::left(factory, self); }
+#endif
 
 };
 

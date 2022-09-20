@@ -83,7 +83,8 @@ void Dictionary::write(cown_ptr<Dictionary> self, cown_ptr<Worker> worker, uint6
 
 void Dictionary::read(cown_ptr<Dictionary> self, cown_ptr<Worker> worker, uint64_t key) {
   when(self) << [worker, key](acquired_cown<Dictionary> self) {
-    Worker::work(worker, self->map[key]);
+    auto it = self->map.find(key);
+    Worker::work(worker, it != self->map.end() ? it->second : 0);
   };
 }
 

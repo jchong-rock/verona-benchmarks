@@ -3,14 +3,15 @@
 #include <cpp/when.h>
 #include "util/bench.h"
 #include <random>
+#include <chrono>
 
 namespace ActorBenchmark {
 
 namespace {
 
-using verona::cpp::make_cown;
-using verona::cpp::cown_ptr;
-using verona::cpp::acquired_cown;
+using namespace verona::cpp;
+using namespace std;
+using namespace std::chrono;
 
 struct Customer;
 struct WaitingRoom;
@@ -115,8 +116,7 @@ static uint64_t BusyWaiter(uint64_t wait) {
 void Barber::enter(cown_ptr<Barber> self, cown_ptr<Customer> customer, cown_ptr<WaitingRoom> room) {
   when(self) << [customer, room](acquired_cown<Barber> self) {
     Customer::sit_down(customer);
-    BusyWaiter(Rand(12345).integer(self->haircut_rate) + 10);
-    // BusyWaiter(Rand(Time.now()._2.u64()).int(_haircut_rate) + 10)
+    BusyWaiter(Rand(time_point_cast<nanoseconds>(system_clock::now()).time_since_epoch().count()).integer(self->haircut_rate) + 1000);
     Customer::pay_and_leave(customer);
     WaitingRoom::next(room);
   };
@@ -145,7 +145,7 @@ void CustomerFactory::run(cown_ptr<CustomerFactory> self, uint64_t rate) {
     for (uint64_t i = 0; i < self->number_of_haircuts; ++i) {
       self->attempts++;
       WaitingRoom::enter(self->room, make_cown<Customer>(tag));
-      BusyWaiter(Rand(12345).integer(rate) + 10);
+      BusyWaiter(Rand(time_point_cast<nanoseconds>(system_clock::now()).time_since_epoch().count()).integer(rate) + 1000);
     }
   };
 }

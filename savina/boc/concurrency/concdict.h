@@ -85,7 +85,11 @@ void Dictionary::write(cown_ptr<Dictionary> self, cown_ptr<Worker> worker, uint6
 void Dictionary::read(cown_ptr<Dictionary> self, cown_ptr<Worker> worker, uint64_t key) {
   when(verona::cpp::read(self)) << [worker, key](acquired_cown<const Dictionary> self) {
     auto it = self->map.find(key);
+    #if true
     Worker::work(worker, it != self->map.end() ? it->second : 0);
+    #else
+    // busy work TBD
+    #endif
   };
 }
 
