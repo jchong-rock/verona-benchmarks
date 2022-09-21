@@ -12,4 +12,8 @@
 
 #include "micro/big.h"
 #include "micro/chameneos.h"
+#include "micro/count.h"
 #include "micro/fib.h"
+#include "micro/fjcreate.h"
+#include "micro/fjthroughput.h"
+#include "micro/pingpong.h"

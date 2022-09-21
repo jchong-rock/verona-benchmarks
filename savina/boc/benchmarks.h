@@ -5,5 +5,6 @@
 #include "concurrency/logmap.h"
 #include "concurrency/philosopher.h"
 
-#include "micro/fib.h"
 #include "micro/chameneos.h"
+#include "micro/count.h"
+#include "micro/fib.h"

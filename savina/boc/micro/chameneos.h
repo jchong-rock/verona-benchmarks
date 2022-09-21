@@ -59,6 +59,7 @@ struct Mall {
       Chameneo::make(mall, Color::factory(i % 3));
   }
 
+  // No longer need to thread the color through the meeting calls (which in my opinion was an optimisation of the rendezvous in the original benchmark)
   static void meet(cown_ptr<Mall> mall, cown_ptr<Chameneo> approaching) {
     when(mall) << [tag=mall, approaching](acquired_cown<Mall> mall) {
       if (mall->meeting_count > 0) {
