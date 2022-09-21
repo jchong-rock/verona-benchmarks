@@ -11,14 +11,14 @@ namespace fib {
 
 using namespace std;
 
-struct None {};
+enum class None {};
 
 struct Fibonacci {
   variant<cown_ptr<Fibonacci>, None> parent;
   uint64_t responses;
   uint64_t result;
 
-  Fibonacci(): parent(None{}), responses(0), result(0) {}
+  Fibonacci(): parent(None()), responses(0), result(0) {}
 
   Fibonacci(cown_ptr<Fibonacci> parent): parent(parent), responses(0), result(0) {}
 

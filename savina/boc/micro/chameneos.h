@@ -30,7 +30,7 @@ namespace Color {
   }
 };
 
-struct None {};
+enum class None {};
 
 struct Mall;
 
@@ -51,7 +51,7 @@ struct Mall {
   variant<cown_ptr<Chameneo>, None> waiting;
 
   Mall(uint64_t meetings, uint64_t chameneos)
-    : chameneos(chameneos), faded(0), meeting_count(meetings), sum(0), waiting(None{}) {}
+    : chameneos(chameneos), faded(0), meeting_count(meetings), sum(0), waiting(None()) {}
 
   static void make(uint64_t meetings, uint64_t chameneos) {
     cown_ptr<Mall> mall = make_cown<Mall>(meetings, chameneos);
