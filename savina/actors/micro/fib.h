@@ -48,13 +48,11 @@ struct Fibonacci {
     };
   }
 
-  struct Propagate {
-    uint64_t result;
-    void operator()(None)       { /* done */ }
-    void operator()(cown_ptr<Fibonacci> parent)   { Fibonacci::response(parent, result); }
-  };
-
-  void propagate() { visit(Propagate{result}, parent); }
+  void propagate() {
+    visit(overloaded {
+      [](None) {/* done */},
+      [&](cown_ptr<Fibonacci> parent)   { Fibonacci::response(parent, result); },
+    }, parent); }
 
 };
 

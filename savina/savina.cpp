@@ -19,7 +19,7 @@ int main(const int argc, const char** argv) {
   // savina.run<actor_benchmark::Big, 12>(20000, 120);
   // savina.run<actor_benchmark::Chameneos, 12>(100, 200000);
   // savina.run<actor_benchmark::Count, 12>(1000000);
-  // savina.run<actor_benchmark::Fib, 12>(25);
+  savina.run<actor_benchmark::Fib, 12>(25);
   // savina.run<actor_benchmark::Fjcreate, 12>(40000);
   // savina.run<actor_benchmark::Fjthrput, 12>(10000, 60, 1, true);
   // savina.run<actor_benchmark::PingPong, 12>(40000);
