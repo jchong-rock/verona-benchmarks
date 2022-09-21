@@ -6,3 +6,4 @@
 #include "concurrency/philosopher.h"
 
 #include "micro/fib.h"
+#include "micro/chameneos.h"

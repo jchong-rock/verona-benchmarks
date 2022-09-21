@@ -16,16 +16,18 @@ int main(const int argc, const char** argv) {
   // savina.run<actor_benchmark::Concsll, 12>(20, 8000, 1, 10);
 
   // savina.run<actor_benchmark::Fib, 12>(25);
-  savina.run<actor_benchmark::Big, 12>(20000, 120);
+  // savina.run<actor_benchmark::Big, 12>(20000, 120);
+  savina.run<actor_benchmark::Chameneos, 12>(100, 200000);
 
   // savina.run<boc_benchmark::Banking, 12>(1000, 50000);
   // savina.run<boc_benchmark::SleepingBarber, 12>(5000, 1000, 1000, 1000);
   // savina.run<boc_benchmark::BndBuffer, 12>(50, 40, 40, 1000, 25, 25);
   // savina.run<boc_benchmark::Concdict, 12>(20, 10000, 10);
   // savina.run<boc_benchmark::DiningPhilosophers, 12>(20, 10000);
-  // savina.run<boc_benchmark::Fib, 12>(25);
   // savina.run<boc_benchmark::Logmap, 12>(25000, 10, 3.64, 0.0025);
 
+  // savina.run<boc_benchmark::Fib, 12>(25);
+  savina.run<boc_benchmark::Chameneos, 12>(100, 200000);
 
   // Read percentage experiments
   // savina.run<actor_benchmark::Concdict, 12>(20, 10000, 0);

@@ -1,5 +1,4 @@
 #include <memory>
-#include <test/harness.h>
 #include <cpp/when.h>
 #include "util/bench.h"
 #include "util/random.h"
