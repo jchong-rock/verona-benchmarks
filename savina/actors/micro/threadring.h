@@ -1,6 +1,7 @@
 #include <cpp/when.h>
 #include "util/bench.h"
 #include "util/random.h"
+#include <variant>
 
 namespace actor_benchmark {
 
@@ -8,56 +9,63 @@ namespace threadring {
 
 using namespace std;
 
+enum class None {};
+
+struct RingActor {
+  variant<cown_ptr<RingActor>, None> _next;
+
+  RingActor(): _next(None()) {}
+
+  RingActor(cown_ptr<RingActor> next): _next(next) {}
+
+  static void next(cown_ptr<RingActor> self, cown_ptr<RingActor> neighbor) {
+    when(self) << [neighbor](acquired_cown<RingActor> self) {
+      self->_next = neighbor;
+    };
+  }
+
+  static void pass(cown_ptr<RingActor> self, uint64_t left) {
+    when(self) << [left](acquired_cown<RingActor> self) {
+      if (left > 0) {
+        visit(overloaded {
+          [&](None&) { /* this can't actually happen because it's a ring */ },
+          [&](cown_ptr<RingActor>& n) { RingActor::pass(n, left - 1); }
+        }, self->_next);
+      } else {
+        /* done */
+      }
+    };
+  }
 };
 
 };
 
-// class iso ThreadRing is AsyncActorBenchmark
-//   let _actors: U64
-//   let _pass: U64
+struct ThreadRing: public AsyncBenchmark {
+  uint64_t actors;
+  uint64_t pass;
 
-//   new iso create(actors: U64, pass: U64) =>
-//     _actors = actors
-//     _pass = pass
+  ThreadRing(uint64_t actors, uint64_t pass): actors(actors), pass(pass) {}
 
-//   fun box apply(c: AsyncBenchmarkCompletion, last: Bool) =>
-//     let first = RingActor(c)
-//     var next = first
+  void run() {
+    using namespace threadring;
 
-//     for k in Range[U64](0, _actors - 1) do
-//       let current = RingActor.neighbor(c, next)
-//       next = current
-//     end
+    auto first = make_cown<RingActor>();
+    auto next = first;
 
-//     first.next(next)
+    for (uint64_t k = 0; k < actors - 1; ++k) {
+      auto current = make_cown<RingActor>(next);
+      next = current;
+    }
 
-//     if _pass > 0 then
-//       first.pass(_pass)
-//     end
-  
-//   fun tag name(): String => "Thread Ring"
-    
-// actor RingActor
-//   let _bench: AsyncBenchmarkCompletion
-//   var _next: (RingActor | None)
+    RingActor::next(first, next);
 
-//   new create(c: AsyncBenchmarkCompletion) =>
-//     _bench = c
-//     _next = None
+    if (pass > 0) {
+      RingActor::pass(first, pass);
+    }
+  }
 
-//   new neighbor(c: AsyncBenchmarkCompletion, next': RingActor) =>
-//     _bench = c
-//     _next = next'
+  std::string name() { return "Thread Ring"; }
+};
 
-//   be next(neighbor': RingActor) =>
-//     _next = neighbor'
+};
 
-//   be pass(left: U64) =>
-//     if left > 0 then
-//       match _next
-//       | let n: RingActor => n.pass(left - 1)
-//       end
-//     else
-//       _bench.complete()
-//     end
-    

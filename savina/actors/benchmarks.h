@@ -17,3 +17,4 @@
 #include "micro/fjcreate.h"
 #include "micro/fjthroughput.h"
 #include "micro/pingpong.h"
+#include "micro/threadring.h"

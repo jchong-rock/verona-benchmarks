@@ -20,9 +20,10 @@ int main(const int argc, const char** argv) {
   // savina.run<actor_benchmark::Chameneos, 12>(100, 200000);
   // savina.run<actor_benchmark::Count, 12>(1000000);
   // savina.run<actor_benchmark::Fib, 12>(25);
-  savina.run<actor_benchmark::Fjcreate, 12>(40000);
-  savina.run<actor_benchmark::Fjthrput, 12>(10000, 60, 1, true);
-  savina.run<actor_benchmark::PingPong, 12>(40000);
+  // savina.run<actor_benchmark::Fjcreate, 12>(40000);
+  // savina.run<actor_benchmark::Fjthrput, 12>(10000, 60, 1, true);
+  // savina.run<actor_benchmark::PingPong, 12>(40000);
+  savina.run<actor_benchmark::ThreadRing, 12>(100, 100000);
 
   // BoC
   // savina.run<boc_benchmark::Banking, 12>(1000, 50000);
