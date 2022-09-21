@@ -5,9 +5,10 @@
 #include <float.h>
 #include "stats.h"
 
-using verona::cpp::make_cown;
-using verona::cpp::cown_ptr;
-using verona::cpp::acquired_cown;
+using namespace verona::cpp;
+
+template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 struct AsyncBenchmark {
   virtual void run()=0;
