@@ -3,17 +3,30 @@
 #include <random>
 #include <cmath>
 #include <unordered_map>
+#include <variant>
 
 namespace actor_benchmark {
-namespace {
+
+namespace filterbank {
 
 using namespace verona::cpp;
 using namespace std;
 
 using Matrix = vector<vector<uint64_t>>;
 
+struct Producer;
+struct Branch;
+
 struct Source {
-  static void boot(cown_ptr<Source>);
+  cown_ptr<Producer> producer;
+  cown_ptr<Branch> branch;
+  uint64_t max;
+  uint64_t current;
+
+  Source(cown_ptr<Producer> producer, cown_ptr<Branch> branch):
+    producer(producer), branch(branch), max(1000), current(0) {}
+
+  static void boot(cown_ptr<Source> self);
 };
 
 struct Producer {
@@ -106,6 +119,25 @@ struct Integrator {
 
 // trying to beat obesity by loosening your belt
 
+struct SampleFilter;
+struct TaggedForward;
+
+struct FirFilter {
+  uint64_t length;
+  vector<uint64_t> coefficients;
+  variant<cown_ptr<SampleFilter>, cown_ptr<TaggedForward>> next;
+
+  vector<uint64_t> data;
+  uint64_t index;
+  bool is_full;
+
+  FirFilter(uint64_t length, vector<uint64_t> coefficients, variant<cown_ptr<SampleFilter>, cown_ptr<TaggedForward>> next):
+    length(length), coefficients(coefficients), next(next), index(0), data(length, 0), is_full(false) {}
+
+  static void value(cown_ptr<FirFilter> self, uint64_t n);
+
+};
+
 struct Delay {
   const uint64_t length;
   cown_ptr<FirFilter> filter;
@@ -134,9 +166,9 @@ struct SampleFilter {
   static void value(cown_ptr<SampleFilter> self, uint64_t n) {
     when(self) << [n](acquired_cown<SampleFilter> self) {
       if (self->samples_received == 0) {
-        Delay::value(n);
+        Delay::value(self->delay, n);
       } else {
-        Delay::value(0);
+        Delay::value(self->delay, 0);
       }
 
       self->samples_received = (self->samples_received + 1) % self->rate;
@@ -144,35 +176,35 @@ struct SampleFilter {
   }
 };
 
-// actor TaggedForward
-//   let _id: U64
-//   let _integrator: Integrator
+struct TaggedForward {
+  uint64_t id;
+  cown_ptr<Integrator> integrator;
 
-//   new create(id: U64, integrator: Integrator) =>
-//     _id = id
-//     _integrator = integrator
+  TaggedForward(uint64_t id, cown_ptr<Integrator> integrator): id(id), integrator(integrator) {}
 
-//   be value(n: U64) =>
-//     _integrator.value(_id, n)
+  static void value(cown_ptr<TaggedForward> self, uint64_t n) {
+    when(self) << [n](acquired_cown<TaggedForward> self) {
+      Integrator::value(self->integrator, self->id, n);
+    };
+  }
+};
 
 struct Bank {
   cown_ptr<Delay> entry;
 
-  Bank(uint64_t id, uint64_t columns, vector<uint64_t> h, vector<uint64_t> f, cown_ptr<Integrator>): entry(make_cown<Delay>(columns - 1)) {
+  Bank(uint64_t id, uint64_t columns, vector<uint64_t> h, vector<uint64_t> f, cown_ptr<Integrator> integrator)
+    : entry(make_cown<Delay>(columns - 1,
+              make_cown<FirFilter>(columns, h,
+                make_cown<SampleFilter>(columns,
+                  make_cown<Delay>(columns - 1,
+                    make_cown<FirFilter>(columns, f,
+                      make_cown<TaggedForward>(id, integrator))))))) {}
 
+  static void value(cown_ptr<Bank> self, uint64_t n) {
+    when(self) << [n](acquired_cown<Bank> self) {
+      Delay::value(self->entry, n);
+    };
   }
-
-//   new create(id: U64, columns: U64, h: Array[U64] val, f: Array[U64] val, integrator: Integrator) =>
-//     _entry = Delay(columns - 1, 
-//       FirFilter(columns, h, 
-//         SampleFilter(columns, 
-//           Delay(columns - 1, 
-//             FirFilter(columns, f, 
-//               TaggedForward(id, integrator))))))  
-  
-//   be value(n: U64) =>
-//     _entry.value(n)
-
 };
 
 struct Branch {
@@ -182,100 +214,63 @@ struct Branch {
   Matrix f;
   cown_ptr<Integrator> integrator;
   vector<cown_ptr<Bank>> banks;
+
+  Branch(uint64_t channels, uint64_t columns, Matrix h, Matrix f, cown_ptr<Integrator> integrator):
+    channels(channels), columns(columns), h(h), f(f), integrator(integrator)
+  {
+    uint64_t index = 0;
+    for (uint64_t i = 0; i < channels; ++i) {
+      index = i;
+
+      banks.push_back(make_cown<Bank>(i, columns, h[index], f[index], integrator));
+    }
+  }
+
+  static void value(cown_ptr<Branch> self, uint64_t n) {
+    when(self) << [n](acquired_cown<Branch> self) {
+      for (cown_ptr<Bank> bank: self->banks) {
+        Bank::value(bank, n);
+      }
+    };
+  }
 };
 
-// actor Branch
-//   let _channels: U64
-//   let _columns: U64
-//   let _h: Matrix
-//   let _f: Matrix
-//   let _integrator: Integrator
-//   let _banks: Array[Bank]
+void Source::boot(cown_ptr<Source> self) {
+  when(self) << [tag = self](acquired_cown<Source> self) {
+    Branch::value(self->branch, self->current);
+    self->current = (self->current + 1) % self->max;
+    Producer::next(self->producer, tag);
+  };
+}
 
-//   new create(channels: U64, columns: U64, h: Matrix, f: Matrix, integrator: Integrator) =>
-//     _channels = channels
-//     _columns = columns
-//     _h = h
-//     _f = f
-//     _integrator = integrator
+void FirFilter::value(cown_ptr<FirFilter> self, uint64_t n) {
+  when(self) << [n](acquired_cown<FirFilter> self) {
+    self->data[self->index] = n;
+    self->index++;
 
-//     _banks = Array[Bank]
+    if (self->index == self->length) {
+      self->is_full = true;
+      self->index = 0;
+    }
 
-//     var index: USize = 0
+    if (self->is_full) {
+      uint64_t sum = 0;
+      uint64_t i = 0;
 
-//     for i in Range[U64](0, _channels) do
-//       index = i.usize()
+      while (i < self->length) {
+        sum += self->data[i] * self->coefficients[self->length - i - 1];
+        i++;
+      }
 
-//       try
-//         _banks.push(Bank(i, _columns, _h(index)?, _f(index)?, _integrator))
-//       end
-//     end
+      visit(overloaded {
+        [&](cown_ptr<SampleFilter> next) { SampleFilter::value(next, sum); },
+        [&](cown_ptr<TaggedForward> next) { TaggedForward::value(next, sum); }
+      }, self->next);
+    }
+  };
+}
 
-//   be value(n: U64) =>
-//     for bank in _banks.values() do
-//       bank.value(n)
-//     end
-
-// actor Source
-//   let _producer: Producer
-//   let _branch: Branch
-//   let _max: U64
-//   var _current: U64
-
-//   new create(producer: Producer, branch: Branch) =>
-//     _producer = producer
-//     _branch = branch
-//     _max = 1000
-//     _current = 0
-
-//   be boot() =>
-//     _branch.value(_current)
-//     _current = (_current + 1) % _max
-//     _producer.next(this)
-
-
-
-// actor FirFilter
-//   let _length: U64
-//   let _coefficients: Array[U64] val
-//   let _next: (SampleFilter | TaggedForward)
-
-//   var _data: Array[U64]
-//   var _index: USize
-//   var _is_full: Bool
-
-//   new create(length: U64, coefficients: Array[U64] val, next: (SampleFilter | TaggedForward)) =>
-//     _length = length
-//     _coefficients = coefficients
-//     _next = next
-
-//     _data = Array[U64].init(U64(0), _length.usize())
-//     _index = 0
-//     _is_full = false
-
-//   be value(n: U64) =>
-//     try
-//       _data(_index)? = n
-//       _index = _index + 1
-
-//       if _index == _length.usize() then
-//         _is_full = true
-//         _index = 0
-//       end
-      
-//       if _is_full then
-//         var sum: U64 = 0
-//         var i: USize = 0
-
-//         while i < _length.usize() do
-//           sum = sum + (_data(i)? * _coefficients(_length.usize() - i - 1)?)
-//           i = i + 1
-//         end
-      
-//         _next.value(sum)
-//       end
-//     end
-
+};
 
 struct FilterBank: public AsyncBenchmark {
   const uint64_t simulations;
@@ -285,9 +280,11 @@ struct FilterBank: public AsyncBenchmark {
   uint64_t channels;
 
   FilterBank(uint64_t columns, uint64_t simulations, uint64_t channels, uint64_t sinkrate):
-    simulations(simulations), columns(columns), sinkrate(sinkrate), width(columns), channels(max((uint64_t)2, min((uint64_t)33, channels))) {}
+    simulations(simulations), columns(columns), sinkrate(sinkrate), width(columns), channels(std::max((uint64_t)2, std::min((uint64_t)33, channels))) {}
 
   void run() {
+    using namespace filterbank;
+
     vector<vector<uint64_t>> h(channels);
     vector<vector<uint64_t>> f(channels);
 
@@ -300,21 +297,17 @@ struct FilterBank: public AsyncBenchmark {
       }
     }
 
-    cown_ptr<Producer> producer = make_cown<Producer>(simulations);
-    cown_ptr<Sink> sink = make_cown<Sink>(sinkrate);
-    cown_ptr<Combine> combine = make_cown<Combine>(sink);
-    cown_ptr<Integrator> Integrator = make_cown<Integrator>(channels, combine);
-//     let combine = Combine(sink)
-//     let integrator = Integrator(_channels, combine)
-//     let branch = Branch(_channels, _columns, consume h, consume f, integrator)
-//     let source = Source(producer, branch)
+    auto producer = make_cown<Producer>(simulations);
+    auto sink = make_cown<Sink>(sinkrate);
+    auto combine = make_cown<Combine>(sink);
+    auto integrator = make_cown<Integrator>(channels, combine);
+    auto branch = make_cown<Branch>(channels, columns, h, f, integrator);
+    auto source = make_cown<Source>(producer, branch);
 
-//     producer.next(source)
+    Producer::next(producer, source);
   }
 
   std::string name() { return "FilterBank"; }
-};
-
 };
 
 };

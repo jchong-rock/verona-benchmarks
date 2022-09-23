@@ -52,7 +52,8 @@ struct Fibonacci {
     visit(overloaded {
       [](None) {/* done */},
       [&](cown_ptr<Fibonacci> parent)   { Fibonacci::response(parent, result); },
-    }, parent); }
+    }, parent);
+  }
 
 };
 
