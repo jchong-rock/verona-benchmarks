@@ -81,26 +81,6 @@ namespace Sorter {
       return left;
     }
   }
-
-  // static void result(cown_ptr<Sorter> self, vector<uint64_t> sorted, Position position) {
-  //   when(self) << [tag=self, sorted=move(sorted), position](acquired_cown<Sorter> self) mutable {
-  //     if (sorted->size() > 0) {
-  //       vector<uint64_t> temp = make_unique<vector<uint64_t>>();
-
-  //       if (self->results != nullptr) {
-  //         if (position == Position::Left) {
-  //           temp->insert(temp->end(), sorted->begin(), sorted->end());
-  //           temp->insert(temp->end(), self->results->begin(), self->results->end());
-  //         } else if (position == Position::Right) {
-  //           temp->insert(temp->end(), self->results->begin(), self->results->end());
-  //           temp->insert(temp->end(), sorted->begin(), sorted->end());
-  //         }
-  //         self->results = move(temp);
-  //       }
-
-  //     }
-  //   };
-  // }
 };
 
 };
@@ -128,10 +108,10 @@ struct Quicksort: public AsyncBenchmark {
     using namespace quicksort;
     cown_ptr<vector<uint64_t>> result = Sorter::sort(move(data), threshold);
 
-    when(result) << [dataset = dataset](acquired_cown<vector<uint64_t>> result) {
-      assert(result->size() == dataset);
-      assert(is_sorted(result->begin(), result->end()));
-    };
+    // when(result) << [dataset = dataset](acquired_cown<vector<uint64_t>> result) {
+    //   assert(result->size() == dataset);
+    //   assert(is_sorted(result->begin(), result->end()));
+    // };
   }
 
   std::string name() { return "Quicksort"; }
