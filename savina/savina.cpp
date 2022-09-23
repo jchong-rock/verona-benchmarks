@@ -48,4 +48,6 @@ int main(const int argc, const char** argv) {
   // savina.run<boc_benchmark::Concdict, 12>(20, 10000, 0);
   // savina.run<boc_benchmark::Concdict, 12>(20, 10000, 10);
   // savina.run<boc_benchmark::Concdict, 12>(20, 10000, 900);
+
+    savina.run<boc_benchmark::Quicksort, 12>(1000000, uint64_t(1) << 60, 2048, 1024);
 }

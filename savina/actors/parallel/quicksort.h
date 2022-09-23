@@ -42,7 +42,7 @@ struct Sorter {
         p->push_back(item);
     }
 
-      return make_tuple(move(l), move(p), move(r));
+    return make_tuple(move(l), move(p), move(r));
   }
 
   unique_ptr<vector<uint64_t>> sort_sequentially(unique_ptr<vector<uint64_t>> input) {
@@ -51,11 +51,14 @@ struct Sorter {
     if (size < 2)
       return input;
 
-    uint64_t pivot = (*input)[size / 2];
+    uint64_t pivot = input->at(size / 2);
     unique_ptr<vector<uint64_t>> l;
     unique_ptr<vector<uint64_t>> p;
     unique_ptr<vector<uint64_t>> r;
     tie(l, p, r) = pivotize(move(input), pivot);
+
+    l = sort_sequentially(move(l));
+    r = sort_sequentially(move(r));
 
     unique_ptr<vector<uint64_t>> sorted = make_unique<vector<uint64_t>>();
     sorted->insert(sorted->end(), l->begin(), l->end());
@@ -67,13 +70,7 @@ struct Sorter {
 
   void notify_parent() {
     if (position == Position::Initial) {
-      assert(results != nullptr);
-      unique_ptr<vector<uint64_t>> result = move(results);
-      cout << "result: " << result->size() << " ";
-      for (auto e: *result) {
-        cout << e << ", ";
-      }
-      cout << endl;
+      // assert(is_sorted(results->begin(), results->end()));
       /* done */
     } else {
       try {
@@ -94,7 +91,7 @@ struct Sorter {
         self->results = self->sort_sequentially(move(input));
         self->notify_parent();
       } else {
-        uint64_t pivot = (*input)[size / 2];
+        uint64_t pivot = input->at(size / 2);
 
         unique_ptr<vector<uint64_t>> l;
         unique_ptr<vector<uint64_t>> p;
@@ -116,16 +113,16 @@ struct Sorter {
         unique_ptr<vector<uint64_t>> temp = make_unique<vector<uint64_t>>();
 
         if (self->results != nullptr) {
-          if (self->position == Position::Left) {
+          if (position == Position::Left) {
             temp->insert(temp->end(), sorted->begin(), sorted->end());
             temp->insert(temp->end(), self->results->begin(), self->results->end());
-          } else if (self->position == Position::Right) {
+          } else if (position == Position::Right) {
             temp->insert(temp->end(), self->results->begin(), self->results->end());
             temp->insert(temp->end(), sorted->begin(), sorted->end());
           }
+          self->results = move(temp);
         }
 
-        self->results = move(temp);
       }
 
       self->fragments++;

@@ -17,21 +17,11 @@ enum class Position {
 
 enum class None {};
 
-struct Sorter {
-  variant<cown_ptr<Sorter>, None> parent;
-  Position position;
-  uint64_t threshold;
-  uint64_t length;
-  uint64_t fragments;
-  variant<vector<uint64_t>, None> results; // or None?
-
-  Sorter(variant<cown_ptr<Sorter>, None> parent, Position position, uint64_t threshold, uint64_t length):
-    parent(parent), position(position), threshold(threshold), length(length), fragments(0), results(None()) {}
-
+namespace Sorter {
   tuple<vector<uint64_t>, vector<uint64_t>, vector<uint64_t>> pivotize(vector<uint64_t> input, uint64_t pivot) {
     vector<uint64_t> l;
-    vector<uint64_t> r;
     vector<uint64_t> p;
+    vector<uint64_t> r;
 
     for (auto item: input) {
       if (item < pivot)
@@ -42,7 +32,7 @@ struct Sorter {
         p.push_back(item);
     }
 
-      return make_tuple(l, p, r);
+    return make_tuple(move(l), move(p), move(r));
   }
 
   vector<uint64_t> sort_sequentially(vector<uint64_t> input) {
@@ -55,7 +45,10 @@ struct Sorter {
     vector<uint64_t> l;
     vector<uint64_t> p;
     vector<uint64_t> r;
-    tie(l, p, r) = pivotize(input, pivot);
+    tie(l, p, r) = pivotize(move(input), pivot);
+
+    l = sort_sequentially(move(l));
+    r = sort_sequentially(move(r));
 
     vector<uint64_t> sorted;
     sorted.insert(sorted.end(), l.begin(), l.end());
@@ -65,69 +58,49 @@ struct Sorter {
     return sorted;
   }
 
-  void notify_parent() {
-    if (position == Position::Initial) {
-      /* done */
+  cown_ptr<vector<uint64_t>> sort(vector<uint64_t> input, const uint64_t threshold) {
+    uint64_t size = input.size();
+
+    if (size < threshold){
+      return make_cown<vector<uint64_t>>(sort_sequentially(move(input)));
     } else {
-      try {
-        Sorter::result(get<cown_ptr<Sorter>>(parent), get<vector<uint64_t>>(results), position);
-      } catch (const bad_variant_access& ex) {
-          // this seems to not be expected in the original benchmark
-          std::cout << ex.what() << '\n';
-          throw(ex);
-      }
+      uint64_t pivot = input[size / 2];
+
+      vector<uint64_t> l;
+      vector<uint64_t> p;
+      vector<uint64_t> r;
+      tie(l, p, r) = pivotize(move(input), pivot);
+
+      cown_ptr<vector<uint64_t>> left = Sorter::sort(move(l), threshold);
+      cown_ptr<vector<uint64_t>> right = Sorter::sort(move(r), threshold);
+      when(left, right) << [p=move(p)] (acquired_cown<vector<uint64_t>> l, acquired_cown<vector<uint64_t>> r) {
+        l->insert(l->end(), p.begin(), p.end());
+        l->insert(l->end(), r->begin(), r->end());
+      };
+
+      return left;
     }
   }
 
-  static void sort(cown_ptr<Sorter> self, vector<uint64_t> input) {
-    when(self) << [tag=self, input=move(input)](acquired_cown<Sorter> self) {
-      uint64_t size = input.size();
+  // static void result(cown_ptr<Sorter> self, vector<uint64_t> sorted, Position position) {
+  //   when(self) << [tag=self, sorted=move(sorted), position](acquired_cown<Sorter> self) mutable {
+  //     if (sorted->size() > 0) {
+  //       vector<uint64_t> temp = make_unique<vector<uint64_t>>();
 
-      if (size < self->threshold){
-        self->results = self->sort_sequentially(input);
-        self->notify_parent();
-      } else {
-        uint64_t pivot = input[size / 2];
+  //       if (self->results != nullptr) {
+  //         if (position == Position::Left) {
+  //           temp->insert(temp->end(), sorted->begin(), sorted->end());
+  //           temp->insert(temp->end(), self->results->begin(), self->results->end());
+  //         } else if (position == Position::Right) {
+  //           temp->insert(temp->end(), self->results->begin(), self->results->end());
+  //           temp->insert(temp->end(), sorted->begin(), sorted->end());
+  //         }
+  //         self->results = move(temp);
+  //       }
 
-        vector<uint64_t> l;
-        vector<uint64_t> p;
-        vector<uint64_t> r;
-        tie(l, p, r) = self->pivotize(input, pivot);
-
-        Sorter::sort(make_cown<Sorter>(tag, Position::Left, self->threshold, self->length), l);
-        Sorter::sort(make_cown<Sorter>(tag, Position::Right, self->threshold, self->length), r);
-
-        self->results = p;
-        self->fragments++;
-      }
-    };
-  }
-
-  static void result(cown_ptr<Sorter> self, vector<uint64_t> sorted, Position position) {
-    when(self) << [tag=self, sorted, position](acquired_cown<Sorter> self) {
-      if (sorted.size() > 0) {
-        vector<uint64_t> temp;
-
-        visit(overloaded {
-          [&](None) { self->results = None(); },
-          [&](vector<uint64_t> data) {
-            if (self->position == Position::Left) {
-              temp.insert(temp.end(), sorted.begin(), sorted.end());
-              temp.insert(temp.end(), data.begin(), data.end());
-            } else if (self->position == Position::Right) {
-              temp.insert(temp.end(), data.begin(), data.end());
-              temp.insert(temp.end(), sorted.begin(), sorted.end());
-            }
-          }
-        }, self->results);
-      }
-
-      self->fragments++;
-
-      if (self->fragments == 3)
-        self->notify_parent();
-    };
-  }
+  //     }
+  //   };
+  // }
 };
 
 };
@@ -153,7 +126,12 @@ struct Quicksort: public AsyncBenchmark {
     }
 
     using namespace quicksort;
-    Sorter::sort(make_cown<Sorter>(None(), Position::Initial, threshold, dataset), data);
+    cown_ptr<vector<uint64_t>> result = Sorter::sort(move(data), threshold);
+
+    when(result) << [dataset = dataset](acquired_cown<vector<uint64_t>> result) {
+      assert(result->size() == dataset);
+      assert(is_sorted(result->begin(), result->end()));
+    };
   }
 
   std::string name() { return "Quicksort"; }
