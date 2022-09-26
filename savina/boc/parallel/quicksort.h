@@ -11,12 +11,6 @@ namespace quicksort {
 
 using namespace std;
 
-enum class Position {
-  Initial, Left, Right
-};
-
-enum class None {};
-
 namespace Sorter {
   tuple<vector<uint64_t>, vector<uint64_t>, vector<uint64_t>> pivotize(vector<uint64_t> input, uint64_t pivot) {
     vector<uint64_t> l;
@@ -58,30 +52,44 @@ namespace Sorter {
     return sorted;
   }
 
+  // this is doing a lot of the work in one thread and only deferring to do the concat.
   cown_ptr<vector<uint64_t>> sort(vector<uint64_t> input, const uint64_t threshold) {
     uint64_t size = input.size();
 
     if (size < threshold){
-      return make_cown<vector<uint64_t>>(sort_sequentially(move(input)));
-    } else {
-      uint64_t pivot = input[size / 2];
-
-      vector<uint64_t> l;
-      vector<uint64_t> p;
-      vector<uint64_t> r;
-      tie(l, p, r) = pivotize(move(input), pivot);
-
-      cown_ptr<vector<uint64_t>> left = Sorter::sort(move(l), threshold);
-      cown_ptr<vector<uint64_t>> right = Sorter::sort(move(r), threshold);
-      when(left, right) << [p=move(p)] (acquired_cown<vector<uint64_t>> l, acquired_cown<vector<uint64_t>> r) {
-        l->insert(l->end(), p.begin(), p.end());
-        l->insert(l->end(), r->begin(), r->end());
+      cown_ptr<vector<uint64_t>> result = make_cown<vector<uint64_t>>();
+      when(result) << [input=move(input)](acquired_cown<vector<uint64_t>> result) {
+        *result = sort_sequentially(move(input));
       };
+      return result;
+    } else {
+        uint64_t pivot = input[size / 2];
 
-      return left;
+        // need to move pivotize into a new result?
+        vector<uint64_t> l;
+        vector<uint64_t> p;
+        vector<uint64_t> r;
+        tie(l, p, r) = pivotize(move(input), pivot);
+
+        auto left = Sorter::sort(move(l), threshold);
+        auto right = Sorter::sort(move(r), threshold);
+        when(left, right) << [p=move(p)] (acquired_cown<vector<uint64_t>> l, acquired_cown<vector<uint64_t>> r) {
+          l->insert(l->end(), p.begin(), p.end());
+          l->insert(l->end(), r->begin(), r->end());
+          // callback to enable parent?
+        };
+
+        return left;
     }
   }
 };
+
+namespace {
+  // lets do this badly
+  void map() {
+
+  }
+}
 
 };
 
