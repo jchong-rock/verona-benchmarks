@@ -206,5 +206,5 @@ struct Pfannkuchen : public AsyncBenchmark {
 };
 
 int main(int argc, const char** argv) {
-  BenchmarkHarness(argc, argv).run<Pfannkuchen, 12>(12);
+  BenchmarkHarness(argc, argv).run<Pfannkuchen>(12);
 }

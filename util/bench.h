@@ -48,6 +48,7 @@ struct BenchmarkHarness {
   opt::Opt opt;
 
   size_t cores;
+  size_t repetitions;
   bool detect_leaks;
   std::unique_ptr<Writer> writer;
 
@@ -64,6 +65,7 @@ struct BenchmarkHarness {
     std::cout << std::endl;
 
     cores = opt.is<size_t>("--cores", 4);
+    repetitions = opt.is<size_t>("--reps", 100);
 
     detect_leaks = !opt.has("--allow_leaks");
     Scheduler::set_detect_leaks(detect_leaks);
@@ -73,13 +75,13 @@ struct BenchmarkHarness {
     writer->writeHeader();
   }
 
-  template<typename T, size_t iterations, typename...Args>
+  template<typename T, typename...Args>
   void run(Args&&... args) {
     SampleStats samples;
 
     T benchmark(std::forward<Args>(args)...);
 
-    for (size_t i = 0; i < iterations; ++i) {
+    for (size_t i = 0; i < repetitions; ++i) {
       Scheduler& sched = Scheduler::get();
 
       sched.init(cores);

@@ -26,7 +26,6 @@ struct Producer {
     }
 
     when(counter, producer) << [](acquired_cown<Counter> counter, acquired_cown<Producer> producer) {
-      cout << "done" << endl;
       /* done */
     };
   }

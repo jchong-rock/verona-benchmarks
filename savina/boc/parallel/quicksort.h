@@ -86,8 +86,31 @@ namespace Sorter {
 
 namespace {
   // lets do this badly
-  void map() {
+  cown_ptr<vector<int>> map(vector<int> input, function<int(int)> f) {
+    if (input.size() == 0) {
+      return make_cown<vector<int>>(input);
+    } else if (input.size() <= 1) {
+      auto result = make_cown<vector<int>>();
+      when(result) << [input=move(input)](acquired_cown<vector<int>> result) {
+        result->push_back(input[0]);
+      };
+      return result;
+    } else {
+      // split async and join
+      when() << [input=move(input), f]() mutable {
+        auto split = input.size() / 2;
+        vector<int> right;
+        while(split-- > 0) {
+          right.insert(right.begin(), input.back());
+          input.pop_back();
+        }
+        auto left = move(input);
 
+        when(map(move(left), f), map(move(right), f)) << [](acquired_cown<vector<int>> left, acquired_cown<vector<int>> right) {
+          left->insert(left->end(), right->begin(), right->end());
+        };
+      };
+    }
   }
 }
 
