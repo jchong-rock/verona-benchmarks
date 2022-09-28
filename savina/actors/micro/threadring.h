@@ -1,7 +1,6 @@
 #include <cpp/when.h>
 #include "util/bench.h"
 #include "util/random.h"
-#include <variant>
 
 namespace actor_benchmark {
 
@@ -9,12 +8,10 @@ namespace threadring {
 
 using namespace std;
 
-enum class None {};
-
 struct RingActor {
-  variant<cown_ptr<RingActor>, None> _next;
+  cown_ptr<RingActor> _next;
 
-  RingActor(): _next(None()) {}
+  RingActor() {}
 
   RingActor(cown_ptr<RingActor> next): _next(next) {}
 
@@ -27,10 +24,8 @@ struct RingActor {
   static void pass(cown_ptr<RingActor> self, uint64_t left) {
     when(self) << [left](acquired_cown<RingActor> self) {
       if (left > 0) {
-        visit(overloaded {
-          [&](None&) { /* this can't actually happen because it's a ring */ },
-          [&](cown_ptr<RingActor>& n) { RingActor::pass(n, left - 1); }
-        }, self->_next);
+        assert(self->_next != nullptr);
+        RingActor::pass(self->_next, left - 1);
       } else {
         /* done */
       }

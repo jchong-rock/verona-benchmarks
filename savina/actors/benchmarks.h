@@ -22,3 +22,4 @@
 #include "parallel/radixsort.h"
 #include "parallel/recmatmul.h"
 #include "parallel/sieve.h"
+#include "parallel/trapezoid.h"

@@ -1,7 +1,6 @@
 #include <cpp/when.h>
 #include <util/bench.h>
 #include <util/random.h>
-#include <variant>
 
 namespace actor_benchmark {
 
@@ -24,17 +23,15 @@ namespace sieve {
 
 using namespace std;
 
-enum class None {};
-
 struct PrimeFilter {
   uint64_t size;
   uint64_t available;
-  variant<cown_ptr<PrimeFilter>, None> next;
+  cown_ptr<PrimeFilter> next;
   vector<uint64_t> locals;
 
   PrimeFilter(uint64_t size): PrimeFilter(2, size) {}
 
-  PrimeFilter(uint64_t initial, uint64_t size): size(size), available(1), next(None()), locals(size, 0) {
+  PrimeFilter(uint64_t initial, uint64_t size): size(size), available(1), locals(size, 0) {
     locals[0] = initial;
   }
 
@@ -58,20 +55,18 @@ struct PrimeFilter {
   static void check_value(cown_ptr<PrimeFilter> self, uint64_t value) {
     when(self) << [value](acquired_cown<PrimeFilter> self) {
       if (self->is_local(value)) {
-        visit(overloaded {
-          [&](cown_ptr<PrimeFilter> n) { PrimeFilter::check_value(n, value); },
-          [&](None n) { self->handle_prime(value); }
-        }, self->next);
+        if (self->next)
+          PrimeFilter::check_value(self->next, value);
+        else
+          self->handle_prime(value);
       }
     };
   }
 
   static void done(cown_ptr<PrimeFilter> self) {
     when(self) << [](acquired_cown<PrimeFilter> self) {
-      visit(overloaded {
-        [&](cown_ptr<PrimeFilter> n) { PrimeFilter::done(n); },
-        [&](None n) { /* done */ }
-      }, self->next);
+      if (self->next)
+        PrimeFilter::done(self->next);
     };
   }
 };

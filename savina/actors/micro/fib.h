@@ -3,7 +3,6 @@
 #include <cpp/when.h>
 #include "util/bench.h"
 #include <random>
-#include <variant>
 
 namespace actor_benchmark {
 
@@ -14,11 +13,11 @@ using namespace std;
 enum class None {};
 
 struct Fibonacci {
-  variant<cown_ptr<Fibonacci>, None> parent;
+  cown_ptr<Fibonacci> parent;
   uint64_t responses;
   uint64_t result;
 
-  Fibonacci(): parent(None()), responses(0), result(0) {}
+  Fibonacci(): responses(0), result(0) {}
 
   Fibonacci(cown_ptr<Fibonacci> parent): parent(parent), responses(0), result(0) {}
 
@@ -49,10 +48,8 @@ struct Fibonacci {
   }
 
   void propagate() {
-    visit(overloaded {
-      [](None) {/* done */},
-      [&](cown_ptr<Fibonacci> parent)   { Fibonacci::response(parent, result); },
-    }, parent);
+    if (parent)
+      Fibonacci::response(parent, result);
   }
 
 };

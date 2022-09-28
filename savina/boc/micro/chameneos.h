@@ -2,7 +2,6 @@
 #include <cpp/when.h>
 #include "util/bench.h"
 #include "util/random.h"
-#include <variant>
 
 namespace boc_benchmark {
 
@@ -48,10 +47,10 @@ struct Mall {
   uint64_t faded;
   uint64_t meeting_count;
   uint64_t sum;
-  variant<cown_ptr<Chameneo>, None> waiting;
+  cown_ptr<Chameneo> waiting;
 
   Mall(uint64_t meetings, uint64_t chameneos)
-    : chameneos(chameneos), faded(0), meeting_count(meetings), sum(0), waiting(None()) {}
+    : chameneos(chameneos), faded(0), meeting_count(meetings), sum(0) {}
 
   static void make(uint64_t meetings, uint64_t chameneos) {
     cown_ptr<Mall> mall = make_cown<Mall>(meetings, chameneos);
@@ -63,24 +62,22 @@ struct Mall {
   static void meet(cown_ptr<Mall> mall, cown_ptr<Chameneo> approaching) {
     when(mall) << [tag=mall, approaching](acquired_cown<Mall> mall) {
       if (mall->meeting_count > 0) {
-        visit(overloaded{
-          [&](None) { mall->waiting = approaching; },
-          [&](cown_ptr<Chameneo> chameneo) {
+        if (mall->waiting) {
+          when(mall->waiting, approaching) << [a_tag=mall->waiting, b_tag=approaching](acquired_cown<Chameneo> a, acquired_cown<Chameneo> b) {
+            a->color = b->color = Color::complement(a->color, b->color);
 
-            when(chameneo, approaching) << [a_tag=chameneo, b_tag=approaching](acquired_cown<Chameneo> a, acquired_cown<Chameneo> b) {
-              a->color = b->color = Color::complement(a->color, b->color);
+            a->meeting_count++;
+            Mall::meet(a->mall, a_tag);
 
-              a->meeting_count++;
-              Mall::meet(a->mall, a_tag);
+            b->meeting_count++;
+            Mall::meet(b->mall, b_tag);
+          };
 
-              b->meeting_count++;
-              Mall::meet(b->mall, b_tag);
-            };
-
-            mall->meeting_count--;
-            mall->waiting = None{};
-          },
-        }, mall->waiting);
+          mall->meeting_count--;
+          mall->waiting = nullptr;
+        } else {
+          mall->waiting = approaching;
+        }
       } else {
 
         when(tag, approaching) << [](acquired_cown<Mall> mall, acquired_cown<Chameneo> approaching) {

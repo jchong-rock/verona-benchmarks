@@ -3,7 +3,6 @@
 #include <cpp/when.h>
 #include "util/bench.h"
 #include <random>
-#include <variant>
 
 namespace boc_benchmark {
 

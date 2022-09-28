@@ -3,7 +3,6 @@
 #include <util/random.h>
 #include <cmath>
 #include <unordered_map>
-#include <variant>
 
 namespace actor_benchmark {
 
@@ -18,14 +17,17 @@ enum class Position {
 enum class None {};
 
 struct Sorter {
-  variant<cown_ptr<Sorter>, None> parent;
+  cown_ptr<Sorter> parent;
   Position position;
   uint64_t threshold;
   uint64_t length;
   uint64_t fragments;
   unique_ptr<vector<uint64_t>> results; // or None?
 
-  Sorter(variant<cown_ptr<Sorter>, None> parent, Position position, uint64_t threshold, uint64_t length):
+  Sorter(Position position, uint64_t threshold, uint64_t length):
+    position(position), threshold(threshold), length(length), fragments(0), results(nullptr) {}
+
+  Sorter(cown_ptr<Sorter> parent, Position position, uint64_t threshold, uint64_t length):
     parent(parent), position(position), threshold(threshold), length(length), fragments(0), results(nullptr) {}
 
   tuple<unique_ptr<vector<uint64_t>>, unique_ptr<vector<uint64_t>>, unique_ptr<vector<uint64_t>>> pivotize(unique_ptr<vector<uint64_t>> input, uint64_t pivot) {
@@ -73,13 +75,7 @@ struct Sorter {
       // assert(is_sorted(results->begin(), results->end()));
       /* done */
     } else {
-      try {
-        Sorter::result(get<cown_ptr<Sorter>>(parent), move(results), position);
-      } catch (const bad_variant_access& ex) {
-          // this seems to not be expected in the original benchmark
-          std::cout << ex.what() << '\n';
-          throw(ex);
-      }
+      Sorter::result(parent, move(results), position);
     }
   }
 
@@ -161,7 +157,7 @@ struct Quicksort: public AsyncBenchmark {
     // cout << endl;
 
     using namespace quicksort;
-    Sorter::sort(make_cown<Sorter>(None(), Position::Initial, threshold, dataset), move(data));
+    Sorter::sort(make_cown<Sorter>(Position::Initial, threshold, dataset), move(data));
   }
 
   std::string name() { return "Quicksort"; }

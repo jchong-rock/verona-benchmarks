@@ -2,7 +2,6 @@
 #include <cpp/when.h>
 #include "util/bench.h"
 #include "util/random.h"
-#include <variant>
 
 namespace actor_benchmark {
 
@@ -52,10 +51,10 @@ struct Mall {
   uint64_t faded;
   uint64_t meeting_count;
   uint64_t sum;
-  variant<cown_ptr<Chameneo>, None> waiting;
+  cown_ptr<Chameneo> waiting;
 
   Mall(uint64_t meetings, uint64_t chameneos)
-    : chameneos(chameneos), faded(0), meeting_count(meetings), sum(0), waiting(None()) {}
+    : chameneos(chameneos), faded(0), meeting_count(meetings), sum(0) {}
 
   static void make(uint64_t meetings, uint64_t chameneos) {
     cown_ptr<Mall> mall = make_cown<Mall>(meetings, chameneos);
@@ -77,14 +76,13 @@ struct Mall {
   static void meet(cown_ptr<Mall> self, cown_ptr<Chameneo> approaching, ChameneoColor color) {
     when(self) << [approaching, color](acquired_cown<Mall> self) {
       if (self->meeting_count > 0) {
-        visit(overloaded{
-          [&](None) { self->waiting = approaching; },
-          [&](cown_ptr<Chameneo> chameneo) {
-            self->meeting_count--;
-            Chameneo::meet(chameneo, approaching, color);
-            self->waiting = None{};
-          },
-        }, self->waiting);
+        if(!self->waiting) {
+          self->waiting = approaching;
+        } else {
+          self->meeting_count--;
+          Chameneo::meet(self->waiting, approaching, color);
+          self->waiting = nullptr; // cown_ptr<Chameneo>();
+        }
       } else {
         Chameneo::report(approaching);
       }

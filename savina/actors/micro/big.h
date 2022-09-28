@@ -2,7 +2,6 @@
 #include <cpp/when.h>
 #include "util/bench.h"
 #include "util/random.h"
-#include <variant>
 
 namespace actor_benchmark {
 
