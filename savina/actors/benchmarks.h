@@ -19,3 +19,6 @@
 #include "parallel/apsp.h"
 #include "parallel/filterbank.h"
 #include "parallel/quicksort.h"
+#include "parallel/radixsort.h"
+#include "parallel/recmatmul.h"
+#include "parallel/sieve.h"

@@ -52,7 +52,7 @@ namespace Sorter {
     return sorted;
   }
 
-  // this is doing a lot of the work in one thread and only deferring to do the concat.
+  // this is doing a lot of the work in one thread and only deferring to do the final sorts and the concat.
   cown_ptr<vector<uint64_t>> sort(vector<uint64_t> input, const uint64_t threshold) {
     uint64_t size = input.size();
 
@@ -65,7 +65,6 @@ namespace Sorter {
     } else {
         uint64_t pivot = input[size / 2];
 
-        // need to move pivotize into a new result?
         vector<uint64_t> l;
         vector<uint64_t> p;
         vector<uint64_t> r;
@@ -76,7 +75,6 @@ namespace Sorter {
         when(left, right) << [p=move(p)] (acquired_cown<vector<uint64_t>> l, acquired_cown<vector<uint64_t>> r) {
           l->insert(l->end(), p.begin(), p.end());
           l->insert(l->end(), r->begin(), r->end());
-          // callback to enable parent?
         };
 
         return left;
@@ -84,35 +82,35 @@ namespace Sorter {
   }
 };
 
-namespace {
-  // lets do this badly
-  cown_ptr<vector<int>> map(vector<int> input, function<int(int)> f) {
-    if (input.size() == 0) {
-      return make_cown<vector<int>>(input);
-    } else if (input.size() <= 1) {
-      auto result = make_cown<vector<int>>();
-      when(result) << [input=move(input)](acquired_cown<vector<int>> result) {
-        result->push_back(input[0]);
-      };
-      return result;
-    } else {
-      // split async and join
-      when() << [input=move(input), f]() mutable {
-        auto split = input.size() / 2;
-        vector<int> right;
-        while(split-- > 0) {
-          right.insert(right.begin(), input.back());
-          input.pop_back();
-        }
-        auto left = move(input);
+// namespace {
+//   // lets do this badly
+//   cown_ptr<vector<int>> map(vector<int> input, function<int(int)> f) {
+//     if (input.size() == 0) {
+//       return make_cown<vector<int>>(input);
+//     } else if (input.size() <= 1) {
+//       auto result = make_cown<vector<int>>();
+//       when(result) << [input=move(input)](acquired_cown<vector<int>> result) {
+//         result->push_back(input[0]);
+//       };
+//       return result;
+//     } else {
+//       // split async and join
+//       when() << [input=move(input), f]() mutable {
+//         auto split = input.size() / 2;
+//         vector<int> right;
+//         while(split-- > 0) {
+//           right.insert(right.begin(), input.back());
+//           input.pop_back();
+//         }
+//         auto left = move(input);
 
-        when(map(move(left), f), map(move(right), f)) << [](acquired_cown<vector<int>> left, acquired_cown<vector<int>> right) {
-          left->insert(left->end(), right->begin(), right->end());
-        };
-      };
-    }
-  }
-}
+//         when(map(move(left), f), map(move(right), f)) << [](acquired_cown<vector<int>> left, acquired_cown<vector<int>> right) {
+//           left->insert(left->end(), right->begin(), right->end());
+//         };
+//       };
+//     }
+//   }
+// }
 
 };
 
