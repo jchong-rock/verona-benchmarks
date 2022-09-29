@@ -24,7 +24,7 @@ struct RingActor {
   static void pass(cown_ptr<RingActor> self, uint64_t left) {
     when(self) << [left](acquired_cown<RingActor> self) {
       if (left > 0) {
-        assert(self->_next != nullptr);
+        // assert(self->_next != nullptr); FIXME
         RingActor::pass(self->_next, left - 1);
       } else {
         /* done */

@@ -12,6 +12,12 @@ namespace radixsort {
 
 using namespace std;
 
+#if true
+// I believe this pipelined version will be incredibly slow to just a sequential version,
+// because i think the only time two actors are working at the same time is when one is sending
+// and one is processing. Experiments look to agree.
+
+// I don't think we can do anything BoC-like here.
 struct Sorter;
 struct Validation;
 
@@ -24,7 +30,9 @@ struct Validation {
   uint64_t previous;
   tuple<int64_t, int32_t> error;
 
-  Validation(uint64_t size): size(size), sum(0), received(0), previous(0), error(make_tuple(0, 0)) {}
+  // vector<uint64_t> data;
+
+  Validation(uint64_t size): size(size), sum(0), received(0), previous(0), error(make_tuple(-1, -1)) {}
 
   static void value(cown_ptr<Validation> self, uint64_t n) {
     when(self) << [n](acquired_cown<Validation> self) {
@@ -33,10 +41,13 @@ struct Validation {
         self->error = make_tuple(n, self->received - 1);
       }
 
+      // self->data.push_back(n);
+
       self->previous = n;
       self->sum += self->previous;
 
       if (self->received == self->size) {
+        // cout << "sorted: " << (is_sorted(self->data.begin(), self->data.end()) ? "true": "false") << endl;
         /* done */
       }
     };
@@ -53,6 +64,8 @@ struct Sorter {
 
   Sorter(uint64_t size, uint64_t radix, Neighbor next):
     next(next), size(size), radix(radix), data(size, 0), received(0), current(0) {}
+
+  // The pipeline seems intrinsic to the order
 
   static void value(cown_ptr<Sorter> self, uint64_t n) {
     when(self) << [n](acquired_cown<Sorter> self){
@@ -119,5 +132,122 @@ struct Radixsort: public AsyncBenchmark {
 
   std::string name() { return "Radixsort"; }
 };
+#else
+
+struct Sorter;
+struct Validation;
+
+using Neighbor = variant<unique_ptr<Validation>, unique_ptr<Sorter>>;
+
+struct Validation {
+  uint64_t size;
+  double sum;
+  uint64_t received;
+  uint64_t previous;
+  tuple<int64_t, int32_t> error;
+
+  // vector<uint64_t> data;
+
+  Validation(uint64_t size): size(size), sum(0), received(0), previous(0), error(make_tuple(-1, -1)) {}
+
+  void value(uint64_t n) {
+    // when(self) << [n](acquired_cown<Validation> self) {
+      received++;
+      if (n < previous && get<1>(error) < 0) {
+        error = make_tuple(n, received - 1);
+      }
+
+      // data.push_back(n);
+
+      previous = n;
+      sum += previous;
+
+      if (received == size) {
+        // cout << "sorted: " << (is_sorted(data.begin(), data.end()) ? "true": "false") << endl;
+        /* done */
+      }
+    // };
+  }
+};
+
+struct Sorter {
+  Neighbor next;
+  uint64_t size;
+  uint64_t radix;
+  vector<uint64_t> data;
+  uint64_t received;
+  uint64_t current;
+
+  Sorter(uint64_t size, uint64_t radix, Neighbor next):
+    next(move(next)), size(size), radix(radix), data(size, 0), received(0), current(0) {}
+
+  // The pipeline seems intrinsic to the order
+
+  void value(uint64_t n) {
+    // when(self) << [n](acquired_cown<Sorter> self){
+      received++;
+
+      if ((n & radix) == 0) {
+        visit(overloaded {
+          [&](unique_ptr<Validation>& next) { next->value(n); },
+          [&](unique_ptr<Sorter>& next) { next->value(n); },
+        }, next);
+      } else {
+        data[current++] = n;
+      }
+
+      if (received == size) {
+        for(uint64_t i = 0 ; i < current; ++i) {
+          visit(overloaded {
+            [&](unique_ptr<Validation>& next) { next->value(data[i]); },
+            [&](unique_ptr<Sorter>& next) { next->value(data[i]); },
+          }, next);
+        }
+      }
+
+    // };
+  }
+};
+
+namespace Source {
+  void create(uint64_t size, uint64_t max, uint64_t seed, Neighbor next) {
+    auto random = SimpleRand(seed);
+
+    for (uint64_t i = 0; i < size; ++i) {
+      visit(overloaded {
+        [&](unique_ptr<Validation>& next) { next->value(random.nextLong() % max); },
+        [&](unique_ptr<Sorter>& next) { next->value(random.nextLong() % max); },
+      }, next);
+    }
+  }
+};
+
+};
+
+struct Radixsort: public AsyncBenchmark {
+  uint64_t dataset;
+  uint64_t max;
+  uint64_t seed;
+
+  Radixsort(uint64_t dataset, uint64_t max, uint64_t seed):
+    dataset(dataset), max(max), seed(seed) {}
+
+  void run() {
+    using namespace radixsort;
+
+    uint64_t radix = max / 2;
+    Neighbor next = make_unique<Validation>(dataset);
+
+    while (radix > 0) {
+      next = make_unique<Sorter>(dataset, radix, move(next));
+      radix /= 2;
+    }
+
+    Source::create(dataset, max, seed, move(next));
+  }
+
+  std::string name() { return "Radixsort"; }
+};
+#endif
 
 };
