@@ -27,10 +27,10 @@ int main(const int argc, const char** argv) {
 
   // savina.run<actor_benchmark::FilterBank>(16384, 34816, 8, 100);
   // savina.run<actor_benchmark::Quicksort>(1000000, uint64_t(1) << 60, 2048, 1024);
-  savina.run<actor_benchmark::Radixsort>(1000000, uint64_t(1) << 60, 2048);
+  // savina.run<actor_benchmark::Radixsort>(1000000, uint64_t(1) << 60, 2048);
   // savina.run<actor_benchmark::Recmatmul>(20, 1024, 16384, 10);
   // savina.run<actor_benchmark::Sieve>(100000, 1000);
-  // savina.run<actor_benchmark::Trapezoid>(10000000, 100, 1, 5);
+  savina.run<actor_benchmark::Trapezoid>(10000000, 100, 1, 5);
 
   // BoC
   // savina.run<boc_benchmark::Banking>(1000, 50000);
@@ -45,4 +45,6 @@ int main(const int argc, const char** argv) {
   // savina.run<boc_benchmark::Fib>(25);
 
   // savina.run<boc_benchmark::Quicksort>(1000000, uint64_t(1) << 60, 2048, 1024);
+  savina.run<boc_benchmark::Trapezoid>(10000000, 100, 1, 5);
+
 }

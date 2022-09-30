@@ -19,6 +19,7 @@ namespace sieve {
    *        in the pipeline to test the value against larger primes and process the new value.
    *      - I think this means we get a pipeline of checking filters.
    *  - feed odd 3..N numbers to the initial prime filter (but does not aggregate the results).
+   *
    */
 
 using namespace std;

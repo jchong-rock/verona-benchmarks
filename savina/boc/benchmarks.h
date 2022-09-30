@@ -10,3 +10,4 @@
 #include "micro/fib.h"
 
 #include "parallel/quicksort.h"
+#include "parallel/trapezoid.h"

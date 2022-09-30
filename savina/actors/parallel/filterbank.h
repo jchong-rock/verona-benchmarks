@@ -117,8 +117,6 @@ struct Integrator {
   }
 };
 
-// trying to beat obesity by loosening your belt
-
 struct SampleFilter;
 struct TaggedForward;
 
