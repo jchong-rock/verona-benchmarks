@@ -7,6 +7,7 @@ int main(const int argc, const char** argv) {
   BenchmarkHarness savina(argc, argv);
 
   // Actors
+  std::cout << "actors" << std::endl;
   savina.run<actor_benchmark::Banking>(1000, 50000);
   savina.run<actor_benchmark::SleepingBarber>(5000, 1000, 1000, 1000);
   savina.run<actor_benchmark::BndBuffer>(50, 40, 40, 1000, 25, 25);
@@ -33,6 +34,7 @@ int main(const int argc, const char** argv) {
   savina.run<actor_benchmark::Trapezoid>(10000000, 100, 1, 5);
 
   // BoC
+  std::cout << "boc" << std::endl;
   savina.run<boc_benchmark::Banking>(1000, 50000);
   savina.run<boc_benchmark::SleepingBarber>(5000, 1000, 1000, 1000);
   savina.run<boc_benchmark::BndBuffer>(50, 40, 40, 1000, 25, 25);
