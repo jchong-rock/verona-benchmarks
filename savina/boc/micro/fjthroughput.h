@@ -54,8 +54,8 @@ struct FjthrMaster {
   }
 };
 
-void Throughput::compute(cown_ptr<Throughput> self) {
-  when(self) << [](acquired_cown<Throughput> self) {
+void Throughput::compute(cown_ptr<Throughput> throughput) {
+  when(throughput) << [](acquired_cown<Throughput> throughput) {
     double n = sin(37.2);
     double r = n * n;
   };
