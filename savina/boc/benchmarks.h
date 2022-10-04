@@ -8,6 +8,7 @@
 #include "micro/chameneos.h"
 #include "micro/count.h"
 #include "micro/fib.h"
+#include "micro/fjthroughput.h"
 
 #include "parallel/quicksort.h"
 #include "parallel/trapezoid.h"
