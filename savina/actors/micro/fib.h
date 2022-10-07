@@ -19,13 +19,15 @@ struct Fibonacci {
 
   Fibonacci(): responses(0), result(0) {}
 
-  Fibonacci(cown_ptr<Fibonacci> parent): parent(parent), responses(0), result(0) {}
+  Fibonacci(cown_ptr<Fibonacci>& parent): parent(parent), responses(0), result(0) {}
 
   static void root(int64_t n) { Fibonacci::compute(make_cown<Fibonacci>(), n); }
 
-  static void request(cown_ptr<Fibonacci> parent, int64_t n) { Fibonacci::compute(make_cown<Fibonacci>(parent), n); }
+  static void request(cown_ptr<Fibonacci>& parent, int64_t n) {
+    Fibonacci::compute(make_cown<Fibonacci>(parent), n);
+  }
 
-  static void response(cown_ptr<Fibonacci> self, uint64_t n) {
+  static void response(cown_ptr<Fibonacci>& self, uint64_t n) {
     when(self) << [n](acquired_cown<Fibonacci> self) {
       self->result += n;
       self->responses++;
@@ -35,8 +37,8 @@ struct Fibonacci {
     };
   }
 
-  static void compute(cown_ptr<Fibonacci> self, int64_t n) {
-    when(self) << [tag=self, n](acquired_cown<Fibonacci> self) {
+  static void compute(cown_ptr<Fibonacci>&& self, int64_t n) {
+    when(self) << [tag=self, n](acquired_cown<Fibonacci> self) mutable {
       if (n <= 2) {
         self->result = 1;
         self->propagate();
