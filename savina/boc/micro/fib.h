@@ -15,12 +15,10 @@ struct Fibonacci {
   static cown_ptr<uint64_t> compute(uint64_t n)
   {
     if (n <= 2) {
-      cown_ptr<uint64_t> result = make_cown<uint64_t>(uint64_t{1});
-      return result;
+      return make_cown<uint64_t>(uint64_t{1});
     } else {
       cown_ptr<uint64_t> f1 = Fibonacci::compute(n - 1);
-      cown_ptr<uint64_t> f2 = Fibonacci::compute(n - 2);
-      when(f1, f2) << [](acquired_cown<uint64_t> f1, acquired_cown<uint64_t> f2) { *f1 += * f2; };
+      when(f1, Fibonacci::compute(n - 2)) << [](acquired_cown<uint64_t> f1, acquired_cown<uint64_t> f2) { *f1 += * f2; };
       return f1;
     }
   }

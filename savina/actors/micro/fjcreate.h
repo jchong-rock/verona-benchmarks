@@ -21,11 +21,11 @@ struct ForkJoinMaster {
 
 namespace ForkJoin {
   static void make(cown_ptr<ForkJoinMaster> master, Token token) {
-    // when() << [master]() { // this isn't forking, it's all done in one thread
+    when() << [master]() { // this isn't forking, it's all done in one thread
       double n = sin(double(37.2));
       double r = n * n;
       ForkJoinMaster::done(master);
-    // };
+    };
   }
 };
 

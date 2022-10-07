@@ -21,7 +21,11 @@ using namespace std;
 struct Sorter;
 struct Validation;
 
+#define use_variant
+
+#ifdef use_variant
 using Neighbor = variant<cown_ptr<Validation>, cown_ptr<Sorter>>;
+#endif
 
 struct Validation {
   uint64_t size;
@@ -54,6 +58,7 @@ struct Validation {
   }
 };
 
+#ifdef use_variant
 struct Sorter {
   Neighbor next;
   uint64_t size;
@@ -81,12 +86,16 @@ struct Sorter {
       }
 
       if (self->received == self->size) {
-        for(uint64_t i = 0 ; i < self->current; ++i) {
-          visit(overloaded {
-            [&](cown_ptr<Validation>& next) { Validation::value(next, self->data[i]); },
-            [&](cown_ptr<Sorter>& next) { Sorter::value(next, self->data[i]); },
-          }, self->next);
-        }
+        visit(overloaded {
+          [&](cown_ptr<Validation>& next) {
+            for(uint64_t i = 0 ; i < self->current; ++i)
+              Validation::value(next, self->data[i]);
+          },
+          [&](cown_ptr<Sorter>& next) {
+            for(uint64_t i = 0 ; i < self->current; ++i)
+              Sorter::value(next, self->data[i]);
+          },
+        }, self->next);
       }
 
     };
@@ -97,12 +106,16 @@ namespace Source {
   void create(uint64_t size, uint64_t max, uint64_t seed, Neighbor next) {
     auto random = SimpleRand(seed);
 
-    for (uint64_t i = 0; i < size; ++i) {
-      visit(overloaded {
-        [&](cown_ptr<Validation>& next) { Validation::value(next, random.nextLong() % max); },
-        [&](cown_ptr<Sorter>& next) { Sorter::value(next, random.nextLong() % max); },
-      }, next);
-    }
+    visit(overloaded {
+      [&](cown_ptr<Validation>& next) {
+        for (uint64_t i = 0; i < size; ++i)
+          Validation::value(next, random.nextLong() % max);
+      },
+      [&](cown_ptr<Sorter>& next) {
+        for (uint64_t i = 0; i < size; ++i)
+          Sorter::value(next, random.nextLong() % max);
+      },
+    }, next);
   }
 };
 
@@ -132,6 +145,99 @@ struct Radixsort: public AsyncBenchmark {
 
   std::string name() { return "Radixsort"; }
 };
+#else
+struct Sorter {
+  cown_ptr<Validation> validation;
+  cown_ptr<Sorter> sorter;
+  uint64_t size;
+  uint64_t radix;
+  vector<uint64_t> data;
+  uint64_t received;
+  uint64_t current;
+
+  Sorter(uint64_t size, uint64_t radix, cown_ptr<Validation> next):
+    validation(next), size(size), radix(radix), data(size, 0), received(0), current(0) {}
+
+  Sorter(uint64_t size, uint64_t radix, cown_ptr<Sorter> next):
+    sorter(next), size(size), radix(radix), data(size, 0), received(0), current(0) {}
+
+  // The pipeline seems intrinsic to the order
+
+  static void value(cown_ptr<Sorter> self, uint64_t n) {
+    when(self) << [n](acquired_cown<Sorter> self){
+      self->received++;
+
+      if ((n & self->radix) == 0) {
+        if (self->validation == nullptr)
+          Sorter::value(self->sorter, n);
+        else
+          Validation::value(self->validation, n);
+      } else {
+        self->data[self->current++] = n;
+      }
+
+      if (self->received == self->size) {
+        if (self->validation == nullptr)
+          for(uint64_t i = 0 ; i < self->current; ++i)
+            Sorter::value(self->sorter, self->data[i]);
+        else
+          for(uint64_t i = 0 ; i < self->current; ++i)
+            Validation::value(self->validation, self->data[i]);
+      }
+    };
+  }
+};
+
+namespace Source {
+  void create(uint64_t size, uint64_t max, uint64_t seed, cown_ptr<Validation> next) {
+    auto random = SimpleRand(seed);
+    for (uint64_t i = 0; i < size; ++i) {
+      Validation::value(next, random.nextLong() % max);
+    }
+  }
+
+  void create(uint64_t size, uint64_t max, uint64_t seed, cown_ptr<Sorter> next) {
+    auto random = SimpleRand(seed);
+    for (uint64_t i = 0; i < size; ++i) {
+      Sorter::value(next, random.nextLong() % max);
+    }
+  }
+};
+
+};
+
+struct Radixsort: public AsyncBenchmark {
+  uint64_t dataset;
+  uint64_t max;
+  uint64_t seed;
+
+  Radixsort(uint64_t dataset, uint64_t max, uint64_t seed):
+    dataset(dataset), max(max), seed(seed) {}
+
+  void run() {
+    using namespace radixsort;
+
+    uint64_t radix = max / 2;
+    cown_ptr<Validation> v = make_cown<Validation>(dataset);
+
+    if (radix > 0) {
+      cown_ptr<Sorter> next = make_cown<Sorter>(dataset, radix, v);
+      radix /= 2;
+      while (radix > 0) {
+        next = make_cown<Sorter>(dataset, radix, next);
+        radix /= 2;
+      }
+
+      Source::create(dataset, max, seed, next);
+    } else {
+      Source::create(dataset, max, seed, v);
+    }
+  }
+
+  std::string name() { return "Radixsort"; }
+};
+#endif
+
 #else
 
 struct Sorter;
