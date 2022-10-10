@@ -19,6 +19,7 @@ struct AsyncBenchmark {
 struct Writer {
   virtual void writeHeader()=0;
   virtual void writeEntry(std::string benchmark, double mean, double median, double error, double stddev)=0;
+  virtual ~Writer() {}
 };
 
 struct CSVWriter: public Writer {
@@ -30,7 +31,7 @@ struct CSVWriter: public Writer {
     std::cout << benchmark << "," << mean << "," << median << "," << error << std::endl;
   }
 
-  ~CSVWriter() {}
+  ~CSVWriter() override {}
 };
 
 struct ConsoleWriter: public Writer {
@@ -45,7 +46,7 @@ struct ConsoleWriter: public Writer {
               << std::endl;
   }
 
-  ~ConsoleWriter() {}
+  ~ConsoleWriter() override {}
 };
 
 struct BenchmarkHarness {
