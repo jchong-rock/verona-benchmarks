@@ -17,9 +17,9 @@ struct Smoker {
   cown_ptr<Arbiter> arbiter;
   SimpleRand random;
 
-  Smoker(cown_ptr<Arbiter> arbiter): arbiter(arbiter), random(12345) {};
+  Smoker(cown_ptr<Arbiter>& arbiter): arbiter(arbiter), random(12345) {};
 
-  static void smoke(cown_ptr<Smoker>, uint64_t);
+  static void smoke(const cown_ptr<Smoker>&, uint64_t);
 };
 
 struct Arbiter {
@@ -29,22 +29,22 @@ struct Arbiter {
 
   Arbiter(uint64_t rounds): random(12345), rounds(rounds) {}
 
-  static void add_smokers(cown_ptr<Arbiter> self, uint64_t num_smokers) {
-    when(self) << [tag=self, num_smokers](acquired_cown<Arbiter> self) {
+  static void add_smokers(const cown_ptr<Arbiter>& self, uint64_t num_smokers) {
+    when(self) << [tag=self, num_smokers](acquired_cown<Arbiter> self)  mutable{
       for (uint64_t i = 0; i < num_smokers; ++i)
         self->smokers.push_back(make_cown<Smoker>(tag));
     };
   }
 
-  static void notify_smoker(cown_ptr<Arbiter> self) {
-    when(self) << [](acquired_cown<Arbiter> self) {
+  static void notify_smoker(const cown_ptr<Arbiter>& self) {
+    when(self) << [](acquired_cown<Arbiter> self)  mutable{
       uint64_t index = self->random.nextInt() % self->smokers.size();
       Smoker::smoke(self->smokers[index], self->random.nextInt(1000) + 10);
     };
   }
 
-  static void started(cown_ptr<Arbiter> self) {
-    when(self) << [tag=self](acquired_cown<Arbiter> self) {
+  static void started(const cown_ptr<Arbiter>& self) {
+    when(self) << [tag=self](acquired_cown<Arbiter> self)  mutable{
       if (--self->rounds > 0) {
         Arbiter::notify_smoker(tag);
       } else {
@@ -54,8 +54,8 @@ struct Arbiter {
   }
 };
 
-void Smoker::smoke(cown_ptr<Smoker> self, uint64_t period) {
-  when(self) << [period](acquired_cown<Smoker> self) {
+void Smoker::smoke(const cown_ptr<Smoker>& self, uint64_t period) {
+  when(self) << [period](acquired_cown<Smoker> self)  mutable{
     Arbiter::started(self->arbiter);
 
     // TODO: I don't think this is doing anything?

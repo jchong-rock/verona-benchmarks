@@ -18,17 +18,17 @@ struct Worker {
   SimpleRand random;
   uint64_t messages;
 
-  Worker(cown_ptr<Master> master, uint64_t index, cown_ptr<Dictionary> dictionary, uint64_t messages, uint64_t percentage):
+  Worker(cown_ptr<Master>& master, uint64_t index, cown_ptr<Dictionary>& dictionary, uint64_t messages, uint64_t percentage):
     master(master), percentage(percentage), dictionary(dictionary), random(index + messages + percentage), messages(messages) {}
 
-  static void work(cown_ptr<Worker> self, uint64_t value = 0);
+  static void work(const cown_ptr<Worker>& self, uint64_t value = 0);
 };
 
 struct Dictionary {
   unordered_map<uint64_t, uint64_t> map;
   Dictionary() {}
-  static void write(cown_ptr<Dictionary> self, cown_ptr<Worker> worker, uint64_t key, uint64_t value);
-  static void read(cown_ptr<Dictionary> self, cown_ptr<Worker> worker, uint64_t key);
+  static void write(const cown_ptr<Dictionary>& self, const cown_ptr<Worker>& worker, uint64_t key, uint64_t value);
+  static void read(const cown_ptr<Dictionary>& self, const cown_ptr<Worker>& worker, uint64_t key);
 };
 
 struct Master {
@@ -37,7 +37,7 @@ struct Master {
 
   static cown_ptr<Master> make(uint64_t workers, uint64_t messages, uint64_t percentage) {
     auto master = make_cown<Master>(workers);
-    when(master) << [tag=master, workers, messages, percentage](acquired_cown<Master>) {
+    when(master) << [tag=master, workers, messages, percentage](acquired_cown<Master>)  mutable {
 
       auto dictionary = make_cown<Dictionary>();
 
@@ -48,8 +48,8 @@ struct Master {
     return master;
   }
 
-  static void done(cown_ptr<Master> self) {
-    when(self) << [](acquired_cown<Master> self) {
+  static void done(const cown_ptr<Master>& self) {
+    when(self) << [](acquired_cown<Master> self)  mutable {
       if (self->workers-- == 1) {
         /* done */
       }
@@ -57,8 +57,8 @@ struct Master {
   }
 };
 
-void Worker::work(cown_ptr<Worker> self, uint64_t value) {
-  when(self) << [tag=self, value](acquired_cown<Worker> self) {
+void Worker::work(const cown_ptr<Worker>& self, uint64_t value) {
+  when(self) << [tag=self, value](acquired_cown<Worker> self)  mutable {
     if (self->messages-- >= 1) {
       uint64_t value = self->random.nextInt(100);
       value %= (INT64_MAX / 4096);
@@ -74,15 +74,15 @@ void Worker::work(cown_ptr<Worker> self, uint64_t value) {
   };
 }
 
-void Dictionary::write(cown_ptr<Dictionary> self, cown_ptr<Worker> worker, uint64_t key, uint64_t value) {
+void Dictionary::write(const cown_ptr<Dictionary>& self, const cown_ptr<Worker>& worker, uint64_t key, uint64_t value) {
   when(self) << [worker, key, value](acquired_cown<Dictionary> self) mutable {
     self->map[key] = value;
     Worker::work(worker, value);
   };
 }
 
-void Dictionary::read(cown_ptr<Dictionary> self, cown_ptr<Worker> worker, uint64_t key) {
-  when(self) << [worker, key](acquired_cown<Dictionary> self) {
+void Dictionary::read(const cown_ptr<Dictionary>& self, const cown_ptr<Worker>& worker, uint64_t key) {
+  when(self) << [worker, key](acquired_cown<Dictionary> self)  mutable {
     auto it = self->map.find(key);
     Worker::work(worker, it != self->map.end() ? it->second : 0);
   };

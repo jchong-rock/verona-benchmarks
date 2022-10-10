@@ -19,22 +19,22 @@ struct BigActor {
   vector<cown_ptr<BigActor>> neighbors;
   uint64_t sent;
 
-  BigActor(cown_ptr<BigMaster> master, int64_t index, uint64_t pings)
+  BigActor(const cown_ptr<BigMaster>& master, int64_t index, uint64_t pings)
     : master(master), index(index), random(index), pings(pings), sent(0) {}
 
-  static void set_neighbors(cown_ptr<BigActor> self, vector<cown_ptr<BigActor>> n) {
+  static void set_neighbors(const cown_ptr<BigActor>& self, vector<cown_ptr<BigActor>> n) {
     when(self) << [n](acquired_cown<BigActor> self) mutable {
       self->neighbors = n;
     };
   }
 
-  static void ping(cown_ptr<BigActor> self, int64_t sender) {
+  static void ping(const cown_ptr<BigActor>& self, int64_t sender) {
     when(self) << [sender](acquired_cown<BigActor> self) mutable {
       BigActor::pong(self->neighbors[sender], self->index);
     };
   }
 
-  static void pong(cown_ptr<BigActor> self, int64_t n);
+  static void pong(const cown_ptr<BigActor>& self, int64_t n);
 };
 
 struct BigMaster {
@@ -50,17 +50,17 @@ struct BigMaster {
     for (uint64_t i = 0; i < actors; ++i)
       n.push_back(make_cown<BigActor>(master, i, pings));
 
-    for (cown_ptr<BigActor> big: n) {
+    for (const cown_ptr<BigActor>& big: n) {
       BigActor::set_neighbors(big, n);
     }
 
-    for (cown_ptr<BigActor> big: n) {
+    for (const cown_ptr<BigActor>& big: n) {
       BigActor::pong(big, -1);
     }
   }
 
-  static void done(cown_ptr<BigMaster> self) {
-    when(self) << [](acquired_cown<BigMaster> self) {
+  static void done(const cown_ptr<BigMaster>& self) {
+    when(self) << [](acquired_cown<BigMaster> self)  mutable{
       if(--self->actors == 0) {
         /* done */
       }
@@ -68,8 +68,8 @@ struct BigMaster {
   }
 };
 
-void BigActor::pong(cown_ptr<BigActor> self, int64_t n) {
-  when(self) << [n](acquired_cown<BigActor> self) mutable {
+void BigActor::pong(const cown_ptr<BigActor>& self, int64_t n) {
+  when(self) << [n](acquired_cown<BigActor> self) mutable{
     if (self->sent < self->pings) {
       uint64_t index = self->random.nextInt(self->neighbors.size());
       BigActor::ping(self->neighbors[index], self->index);

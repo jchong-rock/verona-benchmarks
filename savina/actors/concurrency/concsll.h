@@ -47,30 +47,30 @@ struct Worker {
   SimpleRand random;
   uint64_t messages;
 
-  Worker(cown_ptr<Master> master, uint64_t messages, uint64_t size, uint64_t write, cown_ptr<SortedList> list):
+  Worker(cown_ptr<Master>& master, uint64_t messages, uint64_t size, uint64_t write, cown_ptr<SortedList>& list):
     master(master), size(size), write(write), list(list), random(messages + size + write), messages(messages) {}
 
-  static void work(cown_ptr<Worker>, uint64_t value = 0);
+  static void work(const cown_ptr<Worker>&, uint64_t value = 0);
 };
 
 struct SortedList {
   SortedLinkedList<uint64_t> data;
 
-  static void write(cown_ptr<SortedList> self, cown_ptr<Worker> worker, uint64_t value) {
-    when(self) << [worker, value](acquired_cown<SortedList> self) {
+  static void write(const cown_ptr<SortedList>& self, const cown_ptr<Worker>& worker, uint64_t value) {
+    when(self) << [worker, value](acquired_cown<SortedList> self)  mutable {
       self->data.push(value);
       Worker::work(worker, value);
     };
   }
 
-  static void contains(cown_ptr<SortedList> self, cown_ptr<Worker> worker, uint64_t value) {
-    when(self) << [worker, value](acquired_cown<SortedList> self) {
+  static void contains(const cown_ptr<SortedList>& self, const cown_ptr<Worker>& worker, uint64_t value) {
+    when(self) << [worker, value](acquired_cown<SortedList> self)  mutable {
       Worker::work(worker, self->data.contains(value) ? 0 : 1);
     };
   }
 
-  static void size(cown_ptr<SortedList> self, cown_ptr<Worker> worker) {
-    when(self) << [worker](acquired_cown<SortedList> self) {
+  static void size(const cown_ptr<SortedList>& self, const cown_ptr<Worker>& worker) {
+    when(self) << [worker](acquired_cown<SortedList> self)  mutable {
       Worker::work(worker, self->data.size());
     };
   }
@@ -80,7 +80,7 @@ struct Master {
   uint64_t workers;
   cown_ptr<SortedList> list;
 
-  Master(uint64_t workers, cown_ptr<SortedList> list): workers(workers), list(list) {}
+  Master(uint64_t workers, cown_ptr<SortedList>& list): workers(workers), list(list) {}
 
   static void make(uint64_t workers, uint64_t messages, uint64_t size, uint64_t write) {
     cown_ptr<SortedList> list = make_cown<SortedList>();
@@ -92,8 +92,8 @@ struct Master {
     }
   }
 
-  static void done(cown_ptr<Master> self) {
-    when(self) << [](acquired_cown<Master> self) {
+  static void done(const cown_ptr<Master>& self) {
+    when(self) << [](acquired_cown<Master> self)  mutable {
       if (--self->workers == 0) {
         /* done */
       }
@@ -101,8 +101,8 @@ struct Master {
   }
 };
 
-void Worker::work(cown_ptr<Worker> self, uint64_t value) {
-  when(self) << [tag=self, value](acquired_cown<Worker> self) {
+void Worker::work(const cown_ptr<Worker>& self, uint64_t value) {
+  when(self) << [tag=self, value](acquired_cown<Worker> self)  mutable {
     if (--self->messages > 0) {
       uint64_t value2 = self->random.nextInt(100);
 

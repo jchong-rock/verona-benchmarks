@@ -7,9 +7,7 @@ namespace actor_benchmark {
 
 namespace philosopher {
 
-using verona::cpp::make_cown;
-using verona::cpp::cown_ptr;
-using verona::cpp::acquired_cown;
+using namespace verona::cpp;
 
 struct Arbitator;
 
@@ -19,11 +17,11 @@ struct Philosopher {
   uint64_t rounds;
   cown_ptr<Arbitator> arbitator;
 
-  Philosopher(size_t id, uint64_t rounds, cown_ptr<Arbitator> arbitator): id(id), local(0), rounds(rounds), arbitator(arbitator) {}
+  Philosopher(size_t id, uint64_t rounds, cown_ptr<Arbitator>& arbitator): id(id), local(0), rounds(rounds), arbitator(arbitator) {}
 
-  static void start(cown_ptr<Philosopher>);
-  static void denied(cown_ptr<Philosopher>);
-  static void eat(cown_ptr<Philosopher>);
+  static void start(const cown_ptr<Philosopher>&);
+  static void denied(const cown_ptr<Philosopher>&);
+  static void eat(const cown_ptr<Philosopher>&);
 };
 
 struct Arbitator {
@@ -36,8 +34,8 @@ struct Arbitator {
       forks.push_back(false);
   }
 
-  static void hungry(cown_ptr<Arbitator> self, cown_ptr<Philosopher> philosopher, uint64_t id) {
-    when(self) << [philosopher, id](acquired_cown<Arbitator> self) {
+  static void hungry(const cown_ptr<Arbitator>& self, const cown_ptr<Philosopher>& philosopher, uint64_t id) {
+    when(self) << [philosopher, id](acquired_cown<Arbitator> self)  mutable {
       uint64_t right_index = ((id + 1) % self->philosophers);
       if (self->forks[id] || self->forks[right_index]) {
         Philosopher::denied(philosopher);
@@ -49,15 +47,15 @@ struct Arbitator {
     };
   }
 
-  static void done(cown_ptr<Arbitator> self, uint64_t id) {
-    when(self) << [id](acquired_cown<Arbitator> self) {
+  static void done(const cown_ptr<Arbitator>& self, uint64_t id) {
+    when(self) << [id](acquired_cown<Arbitator> self)  mutable {
       self->forks[id] = false;
       self->forks[(id + 1) % self->philosophers] = false;
     };
   }
 
-  static void finished(cown_ptr<Arbitator> self) {
-    when(self) << [](acquired_cown<Arbitator> self) {
+  static void finished(const cown_ptr<Arbitator>& self) {
+    when(self) << [](acquired_cown<Arbitator> self)  mutable {
       if (--(self->done_eating) == 0) {
         return;
       }
@@ -65,21 +63,21 @@ struct Arbitator {
   }
 };
 
-void Philosopher::start(cown_ptr<Philosopher> self) {
-  when(self) << [tag=self](acquired_cown<Philosopher> self) {
+void Philosopher::start(const cown_ptr<Philosopher>& self) {
+  when(self) << [tag=self](acquired_cown<Philosopher> self)  mutable {
     Arbitator::hungry(self->arbitator, tag, self->id);
   };
 }
 
-void Philosopher::denied(cown_ptr<Philosopher> self) {
-  when(self) << [tag=self](acquired_cown<Philosopher> self) {
+void Philosopher::denied(const cown_ptr<Philosopher>& self) {
+  when(self) << [tag=self](acquired_cown<Philosopher> self)  mutable {
     self->local++;
     Arbitator::hungry(self->arbitator, tag, self->id);
   };
 }
 
-void Philosopher::eat(cown_ptr<Philosopher> self) {
-  when(self) << [tag=self](acquired_cown<Philosopher> self) {
+void Philosopher::eat(const cown_ptr<Philosopher>& self) {
+  when(self) << [tag=self](acquired_cown<Philosopher> self)  mutable {
     Arbitator::done(self->arbitator, self->id);
 
     if (--self->rounds >= 1) {

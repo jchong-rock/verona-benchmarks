@@ -13,21 +13,21 @@ struct Ping;
 
 struct Pong {
   uint64_t count = 0;
-  static void ping(cown_ptr<Pong>, cown_ptr<Ping>);
+  static void ping(const cown_ptr<Pong>&, const cown_ptr<Ping>&);
 };
 
 struct Ping {
   uint64_t left;
   cown_ptr<Pong> _pong;
 
-  Ping(uint64_t pings, cown_ptr<Pong> pong): left(pings - 1), _pong(pong) {}
+  Ping(uint64_t pings, const cown_ptr<Pong>& pong): left(pings - 1), _pong(pong) {}
 
-  static void make(uint64_t pings, cown_ptr<Pong> pong) {
+  static void make(uint64_t pings, const cown_ptr<Pong>& pong) {
     Pong::ping(pong, make_cown<Ping>(pings, pong));
   }
 
-  static void pong(cown_ptr<Ping> self) {
-    when(self) << [tag=self](acquired_cown<Ping> self) {
+  static void pong(const cown_ptr<Ping>& self) {
+    when(self) << [tag=self](acquired_cown<Ping> self)  mutable{
       if(self->left > 0) {
         Pong::ping(self->_pong, tag);
         self->left--;
@@ -38,8 +38,8 @@ struct Ping {
   }
 };
 
-void Pong::ping(cown_ptr<Pong> self, cown_ptr<Ping> sender) {
-  when(self) << [sender](acquired_cown<Pong> self) {
+void Pong::ping(const cown_ptr<Pong>& self, const cown_ptr<Ping>& sender) {
+  when(self) << [sender](acquired_cown<Pong> self)  mutable{
     Ping::pong(sender);
     self->count++;
   };

@@ -38,12 +38,12 @@ struct Chameneo {
   ChameneoColor color;
   uint64_t meeting_count;
 
-  Chameneo(cown_ptr<Mall> mall, ChameneoColor color): mall(mall), color(color), meeting_count(0) {}
+  Chameneo(const cown_ptr<Mall>& mall, ChameneoColor color): mall(mall), color(color), meeting_count(0) {}
 
-  static void make(cown_ptr<Mall> mall, ChameneoColor color);
-  static void meet(cown_ptr<Chameneo> self, cown_ptr<Chameneo> approaching, ChameneoColor color);
-  static void change(cown_ptr<Chameneo> self, ChameneoColor color);
-  static void report(cown_ptr<Chameneo> self);
+  static void make(const cown_ptr<Mall>& mall, ChameneoColor color);
+  static void meet(const cown_ptr<Chameneo>& self, const cown_ptr<Chameneo>& approaching, ChameneoColor color);
+  static void change(const cown_ptr<Chameneo>& self, ChameneoColor color);
+  static void report(const cown_ptr<Chameneo>& self);
 };
 
 struct Mall {
@@ -62,8 +62,8 @@ struct Mall {
       Chameneo::make(mall, Color::factory(i % 3));
   }
 
-  static void meetings(cown_ptr<Mall> self, uint64_t count) {
-    when(self) << [count](acquired_cown<Mall> self) {
+  static void meetings(const cown_ptr<Mall>& self, uint64_t count) {
+    when(self) << [count](acquired_cown<Mall> self)  mutable{
       self->faded++;
       self->sum += count;
 
@@ -73,8 +73,8 @@ struct Mall {
     };
   }
 
-  static void meet(cown_ptr<Mall> self, cown_ptr<Chameneo> approaching, ChameneoColor color) {
-    when(self) << [approaching, color](acquired_cown<Mall> self) {
+  static void meet(const cown_ptr<Mall>& self, const cown_ptr<Chameneo>& approaching, ChameneoColor color) {
+    when(self) << [approaching, color](acquired_cown<Mall> self)  mutable{
       if (self->meeting_count > 0) {
         if(!self->waiting) {
           self->waiting = approaching;
@@ -90,12 +90,12 @@ struct Mall {
   }
 };
 
-void Chameneo::make(cown_ptr<Mall> mall, ChameneoColor color) {
+void Chameneo::make(const cown_ptr<Mall>& mall, ChameneoColor color) {
   Mall::meet(mall, make_cown<Chameneo>(mall, color), color);
 }
 
-void Chameneo::meet(cown_ptr<Chameneo> self, cown_ptr<Chameneo> approaching, ChameneoColor color) {
-  when(self) << [tag=self, approaching, color](acquired_cown<Chameneo> self) {
+void Chameneo::meet(const cown_ptr<Chameneo>& self, const cown_ptr<Chameneo>& approaching, ChameneoColor color) {
+  when(self) << [tag=self, approaching, color](acquired_cown<Chameneo> self)  mutable{
     self->color = Color::complement(self->color, color);
     self->meeting_count++;
     Chameneo::change(approaching, self->color);
@@ -103,16 +103,16 @@ void Chameneo::meet(cown_ptr<Chameneo> self, cown_ptr<Chameneo> approaching, Cha
   };
 }
 
-void Chameneo::change(cown_ptr<Chameneo> self, ChameneoColor color) {
-  when(self) << [tag=self, color](acquired_cown<Chameneo> self) {
+void Chameneo::change(const cown_ptr<Chameneo>& self, ChameneoColor color) {
+  when(self) << [tag=self, color](acquired_cown<Chameneo> self)  mutable{
     self->color = color;
     self->meeting_count++;
     Mall::meet(self->mall, tag, self->color);
   };
 }
 
-void Chameneo::report(cown_ptr<Chameneo> self) {
-  when(self) << [tag=self](acquired_cown<Chameneo> self) {
+void Chameneo::report(const cown_ptr<Chameneo>& self) {
+  when(self) << [tag=self](acquired_cown<Chameneo> self)  mutable{
     Mall::meetings(self->mall, self->meeting_count);
     self->color = ChameneoColor::Faded;
   };

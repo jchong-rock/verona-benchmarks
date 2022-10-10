@@ -13,16 +13,16 @@ struct RingActor {
 
   RingActor() {}
 
-  RingActor(cown_ptr<RingActor> next): _next(next) {}
+  RingActor(const cown_ptr<RingActor>& next): _next(next) {}
 
-  static void next(cown_ptr<RingActor> self, cown_ptr<RingActor> neighbor) {
-    when(self) << [neighbor](acquired_cown<RingActor> self) {
+  static void next(const cown_ptr<RingActor>& self, const cown_ptr<RingActor>& neighbor) {
+    when(self) << [neighbor](acquired_cown<RingActor> self)  mutable{
       self->_next = neighbor;
     };
   }
 
-  static void pass(cown_ptr<RingActor> self, uint64_t left) {
-    when(self) << [left](acquired_cown<RingActor> self) {
+  static void pass(const cown_ptr<RingActor>& self, uint64_t left) {
+    when(self) << [left](acquired_cown<RingActor> self)  mutable{
       if (left > 0) {
         // assert(self->_next != nullptr); FIXME
         RingActor::pass(self->_next, left - 1);

@@ -12,8 +12,8 @@ struct Producer;
 
 struct Counter {
   uint64_t count = 0;
-  static void increment(cown_ptr<Counter>);
-  static void retrieve(cown_ptr<Counter>, cown_ptr<Producer>);
+  static void increment(const cown_ptr<Counter>&);
+  static void retrieve(const cown_ptr<Counter>&, const cown_ptr<Producer>&);
 };
 
 struct Producer {
@@ -21,7 +21,7 @@ struct Producer {
 
   Producer(uint64_t messages): messages(messages) { }
 
-  static void make(cown_ptr<Counter> counter, uint64_t messages) {
+  static void make(const cown_ptr<Counter>& counter, uint64_t messages) {
     cown_ptr<Producer> producer = make_cown<Producer>(messages);
     for (uint64_t i = 0; i < messages; ++i) {
       Counter::increment(counter);
@@ -30,19 +30,19 @@ struct Producer {
     Counter::retrieve(counter, producer);
   }
 
-  static void result(cown_ptr<Producer> self, uint64_t result) {
-    when(self) << [](acquired_cown<Producer> self){
+  static void result(const cown_ptr<Producer>& self, uint64_t result) {
+    when(self) << [](acquired_cown<Producer> self) mutable {
       /* done */
     };
   }
 };
 
-void Counter::increment(cown_ptr<Counter> self) {
-  when(self) << [](acquired_cown<Counter> self) { self->count++; };
+void Counter::increment(const cown_ptr<Counter>& self) {
+  when(self) << [](acquired_cown<Counter> self)  mutable { self->count++; };
 }
 
-void Counter::retrieve(cown_ptr<Counter> self, cown_ptr<Producer> sender) {
-  when(self) << [sender](acquired_cown<Counter> self) { Producer::result(sender, self->count); };
+void Counter::retrieve(const cown_ptr<Counter>& self, const cown_ptr<Producer>& sender) {
+  when(self) << [sender](acquired_cown<Counter> self)  mutable { Producer::result(sender, self->count); };
 }
 
 };

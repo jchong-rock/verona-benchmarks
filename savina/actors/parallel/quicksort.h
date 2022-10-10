@@ -27,7 +27,7 @@ struct Sorter {
   Sorter(Position position, uint64_t threshold, uint64_t length):
     position(position), threshold(threshold), length(length), fragments(0), results(nullptr) {}
 
-  Sorter(cown_ptr<Sorter> parent, Position position, uint64_t threshold, uint64_t length):
+  Sorter(const cown_ptr<Sorter>& parent, Position position, uint64_t threshold, uint64_t length):
     parent(parent), position(position), threshold(threshold), length(length), fragments(0), results(nullptr) {}
 
   tuple<unique_ptr<vector<uint64_t>>, unique_ptr<vector<uint64_t>>, unique_ptr<vector<uint64_t>>> pivotize(unique_ptr<vector<uint64_t>> input, uint64_t pivot) {
@@ -79,7 +79,7 @@ struct Sorter {
     }
   }
 
-  static void sort(cown_ptr<Sorter> self, unique_ptr<vector<uint64_t>> input) {
+  static void sort(const cown_ptr<Sorter>& self, unique_ptr<vector<uint64_t>> input) {
     when(self) << [tag=self, input=move(input)](acquired_cown<Sorter> self) mutable {
       uint64_t size = input->size();
 
@@ -103,7 +103,7 @@ struct Sorter {
     };
   }
 
-  static void result(cown_ptr<Sorter> self, unique_ptr<vector<uint64_t>> sorted, Position position) {
+  static void result(const cown_ptr<Sorter>& self, unique_ptr<vector<uint64_t>> sorted, Position position) {
     when(self) << [tag=self, sorted=move(sorted), position](acquired_cown<Sorter> self) mutable {
       if (sorted->size() > 0) {
         unique_ptr<vector<uint64_t>> temp = make_unique<vector<uint64_t>>();

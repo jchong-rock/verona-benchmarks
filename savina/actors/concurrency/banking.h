@@ -9,7 +9,7 @@ struct Account;
 struct Teller;
 
 struct StashToken {
-  virtual void requeue(cown_ptr<Account>)=0;
+  virtual void requeue(cown_ptr<Account>&)=0;
   virtual ~StashToken() {}
 };
 
@@ -21,9 +21,9 @@ struct Account {
 
   Account(uint64_t index, double balance): balance(balance), index(index), stash_mode(false) {}
 
-  static void debit(cown_ptr<Account>, cown_ptr<Account>, cown_ptr<Teller>, double);
-  static void credit(cown_ptr<Account>, cown_ptr<Teller>, double, cown_ptr<Account>);
-  static void reply(cown_ptr<Account>, cown_ptr<Teller>);
+  static void debit(cown_ptr<Account>&, cown_ptr<Account>&, cown_ptr<Teller>&, double);
+  static void credit(cown_ptr<Account>&, cown_ptr<Teller>&, double, cown_ptr<Account>&);
+  static void reply(cown_ptr<Account>&, cown_ptr<Teller>&);
 };
 
 struct DebitMessage: public StashToken {
@@ -31,9 +31,9 @@ struct DebitMessage: public StashToken {
   cown_ptr<Teller> teller;
   double amount;
 
-  DebitMessage(cown_ptr<Account> account, cown_ptr<Teller> teller, double amount): account(account), teller(teller), amount(amount) {}
+  DebitMessage(cown_ptr<Account>& account, cown_ptr<Teller>& teller, double amount): account(account), teller(teller), amount(amount) {}
 
-  void requeue(cown_ptr<Account> receiver) override { Account::debit(receiver, account, teller, amount); }
+  void requeue(cown_ptr<Account>& receiver) override { Account::debit(receiver, account, teller, amount); }
 };
 
 struct CreditMessage: public StashToken {
@@ -41,9 +41,9 @@ struct CreditMessage: public StashToken {
   cown_ptr<Teller> teller;
   double amount;
 
-  CreditMessage(cown_ptr<Account> account, cown_ptr<Teller> teller, double amount): account(account), teller(teller), amount(amount) {}
+  CreditMessage(cown_ptr<Account>& account, cown_ptr<Teller>& teller, double amount): account(account), teller(teller), amount(amount) {}
 
-  void requeue(cown_ptr<Account> receiver) override { Account::credit(receiver, teller, amount, account); }
+  void requeue(cown_ptr<Account>& receiver) override { Account::credit(receiver, teller, amount, account); }
 };
 
 struct Teller {
@@ -62,8 +62,8 @@ struct Teller {
     }
   }
 
-  static void spawn_transactions(cown_ptr<Teller> self) {
-    when(self) << [tag=self](acquired_cown<Teller> self) {
+  static void spawn_transactions(cown_ptr<Teller>&& self) {
+    when(self) << [tag=self](acquired_cown<Teller> self) mutable {
       for (uint64_t i = 0; i < self->transactions; i++)
       {
         // Randomly pick source and destination account
@@ -78,7 +78,7 @@ struct Teller {
     };
   }
 
-  static void reply(cown_ptr<Teller> self) {
+  static void reply(cown_ptr<Teller>& self) {
     when(self) << [](acquired_cown<Teller> self) {
       self->completed++;
       if (self->completed == self->transactions) {
@@ -88,8 +88,8 @@ struct Teller {
   }
 };
 
-void Account::debit(cown_ptr<Account> self, cown_ptr<Account> account, cown_ptr<Teller> teller, double amount) {
-  when(self) << [account, teller, amount](acquired_cown<Account> self) {
+void Account::debit(cown_ptr<Account>& self, cown_ptr<Account>& account, cown_ptr<Teller>& teller, double amount) {
+  when(self) << [account, teller, amount](acquired_cown<Account> self) mutable {
     if (!self->stash_mode) {
       self->balance += amount;
       Account::reply(account, teller);
@@ -99,8 +99,8 @@ void Account::debit(cown_ptr<Account> self, cown_ptr<Account> account, cown_ptr<
   };
 }
 
-void Account::credit(cown_ptr<Account> self, cown_ptr<Teller> teller, double amount, cown_ptr<Account> destination) {
-  when(self) << [tag = self, teller, amount, destination](acquired_cown<Account> self) {
+void Account::credit(cown_ptr<Account>& self, cown_ptr<Teller>& teller, double amount, cown_ptr<Account>& destination) {
+  when(self) << [tag = self, teller, amount, destination](acquired_cown<Account> self) mutable {
     if (!self->stash_mode) {
       self->balance -= amount;
       Account::debit(destination, tag, teller, amount);
@@ -111,8 +111,8 @@ void Account::credit(cown_ptr<Account> self, cown_ptr<Teller> teller, double amo
   };
 }
 
-void Account::reply(cown_ptr<Account> self, cown_ptr<Teller> teller) {
-  when(self) << [tag=self, teller](acquired_cown<Account> self) {
+void Account::reply(cown_ptr<Account>& self, cown_ptr<Teller>& teller) {
+  when(self) << [tag=self, teller](acquired_cown<Account> self) mutable {
     Teller::reply(teller);
     while(!self->stash.empty())
     {

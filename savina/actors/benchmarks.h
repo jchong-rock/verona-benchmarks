@@ -16,7 +16,6 @@
 #include "micro/pingpong.h"
 #include "micro/threadring.h"
 
-#include "parallel/apsp.h"
 #include "parallel/filterbank.h"
 #include "parallel/quicksort.h"
 #include "parallel/radixsort.h"

@@ -17,9 +17,9 @@ struct FjthrMaster;
 struct Throughput {
   cown_ptr<FjthrMaster> master;
 
-  Throughput(cown_ptr<FjthrMaster> master): master(master) {}
+  Throughput(const cown_ptr<FjthrMaster>& master): master(master) {}
 
-  static void compute(cown_ptr<Throughput>);
+  static void compute(const cown_ptr<Throughput>&);
 };
 
 struct FjthrMaster {
@@ -36,21 +36,21 @@ struct FjthrMaster {
     }
 
     for (uint64_t j = 0; j < messages; ++j) {
-      for(cown_ptr<Throughput> k: throughputs) {
+      for(const cown_ptr<Throughput>& k: throughputs) {
         Throughput::compute(k);
       }
     }
   }
 
-  static void done(cown_ptr<FjthrMaster> self) {
-    when(self) << [](acquired_cown<FjthrMaster> self) {
+  static void done(const cown_ptr<FjthrMaster>& self) {
+    when(self) << [](acquired_cown<FjthrMaster> self)  mutable{
       if (--self->total = 0) { /* done */ }
     };
   }
 };
 
-void Throughput::compute(cown_ptr<Throughput> self) {
-  when(self) << [](acquired_cown<Throughput> self) {
+void Throughput::compute(const cown_ptr<Throughput>& self) {
+  when(self) << [](acquired_cown<Throughput> self)  mutable{
     double n = sin(37.2);
     double r = n * n;
     FjthrMaster::done(self->master);

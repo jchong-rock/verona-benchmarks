@@ -53,8 +53,8 @@ struct PrimeFilter {
     }
   }
 
-  static void check_value(cown_ptr<PrimeFilter> self, uint64_t value) {
-    when(self) << [value](acquired_cown<PrimeFilter> self) {
+  static void check_value(const cown_ptr<PrimeFilter>& self, uint64_t value) {
+    when(self) << [value](acquired_cown<PrimeFilter> self)  mutable{
       if (self->is_local(value)) {
         if (self->next)
           PrimeFilter::check_value(self->next, value);
@@ -64,8 +64,8 @@ struct PrimeFilter {
     };
   }
 
-  static void done(cown_ptr<PrimeFilter> self) {
-    when(self) << [](acquired_cown<PrimeFilter> self) {
+  static void done(const cown_ptr<PrimeFilter>& self) {
+    when(self) << [](acquired_cown<PrimeFilter> self)  mutable{
       if (self->next)
         PrimeFilter::done(self->next);
     };
@@ -73,7 +73,7 @@ struct PrimeFilter {
 };
 
 namespace NumberProducer {
-  void create(uint64_t size, cown_ptr<PrimeFilter> filter) {
+  void create(uint64_t size, const cown_ptr<PrimeFilter>& filter) {
     uint64_t candidate = 3;
 
     while (candidate < size) {

@@ -19,7 +19,7 @@ struct Fibonacci {
 
   Fibonacci(): responses(0), result(0) {}
 
-  Fibonacci(cown_ptr<Fibonacci>& parent): parent(parent), responses(0), result(0) {}
+  Fibonacci(const cown_ptr<Fibonacci>& parent): parent(parent), responses(0), result(0) {}
 
   static void root(int64_t n) { Fibonacci::compute(make_cown<Fibonacci>(), n); }
 
@@ -28,7 +28,7 @@ struct Fibonacci {
   }
 
   static void response(cown_ptr<Fibonacci>& self, uint64_t n) {
-    when(self) << [n](acquired_cown<Fibonacci> self) {
+    when(self) << [n](acquired_cown<Fibonacci> self)  mutable {
       self->result += n;
       self->responses++;
 

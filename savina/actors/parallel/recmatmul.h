@@ -30,8 +30,8 @@ struct Master {
 
   static cown_ptr<Master> make(uint64_t workers, uint64_t data_length, uint64_t threshold);
   void send_work(uint64_t priority, uint64_t srA, uint64_t scA, uint64_t srB, uint64_t scB, uint64_t srC, uint64_t scC, uint64_t length, uint64_t dimension);
-  static void work(cown_ptr<Master> self, uint64_t priority, uint64_t srA, uint64_t scA, uint64_t srB, uint64_t scB, uint64_t srC, uint64_t scC, uint64_t length, uint64_t dimension);
-  static void done(cown_ptr<Master>);
+  static void work(const cown_ptr<Master>& self, uint64_t priority, uint64_t srA, uint64_t scA, uint64_t srB, uint64_t scB, uint64_t srC, uint64_t scC, uint64_t length, uint64_t dimension);
+  static void done(const cown_ptr<Master>&);
 };
 
 struct Collector {
@@ -39,13 +39,13 @@ struct Collector {
   uint64_t length;
   vector<vector<uint64_t>> result;
 
-  Collector(cown_ptr<Master> master, uint64_t length): master(master), length(length) {
+  Collector(const cown_ptr<Master>& master, uint64_t length): master(master), length(length) {
     for (uint64_t i = 0; i < length; ++i)
       result.push_back(vector<uint64_t>(length, 0));
   }
 
-  static void collect(cown_ptr<Collector> self, vector<tuple<uint64_t, uint64_t, uint64_t>> partial_result) {
-    when(self) << [partial_result=move(partial_result)](acquired_cown<Collector> self) {
+  static void collect(const cown_ptr<Collector>& self, vector<tuple<uint64_t, uint64_t, uint64_t>> partial_result) {
+    when(self) << [partial_result=move(partial_result)](acquired_cown<Collector> self)  mutable{
       for (uint64_t n = 0; n < partial_result.size(); ++n) {
         auto coord = partial_result[n];
         auto i = get<0>(coord);
@@ -69,15 +69,15 @@ struct Worker {
   uint64_t threshold;
   bool did_work;
 
-  Worker(cown_ptr<Master> master, cown_ptr<Collector> collector, vector<vector<uint64_t>> matrix_a, vector<vector<uint64_t>> matrix_b, uint64_t threshold)
+  Worker(const cown_ptr<Master>& master, const cown_ptr<Collector>& collector, vector<vector<uint64_t>> matrix_a, vector<vector<uint64_t>> matrix_b, uint64_t threshold)
     :master(master), collector(collector), matrix_a(matrix_a), matrix_b(matrix_b), threshold(threshold), did_work(false) {}
 
-  static void work(cown_ptr<Worker> self, uint64_t priority, uint64_t srA, uint64_t scA, uint64_t srB, uint64_t scB, uint64_t srC, uint64_t scC, uint64_t length, uint64_t dimension);
+  static void work(const cown_ptr<Worker>& self, uint64_t priority, uint64_t srA, uint64_t scA, uint64_t srB, uint64_t scB, uint64_t srC, uint64_t scC, uint64_t length, uint64_t dimension);
 };
 
 cown_ptr<Master> Master::make(uint64_t workers, uint64_t data_length, uint64_t threshold) {
   cown_ptr<Master> master = make_cown<Master>();
-  when(master) << [workers, data_length, threshold, tag=master](acquired_cown<Master> master) {
+  when(master) << [workers, data_length, threshold, tag=master](acquired_cown<Master> master)  mutable{
     master->length = data_length;
     master->num_blocks = data_length * data_length;
     master->sent = 0;
@@ -117,21 +117,21 @@ void Master::send_work(uint64_t priority, uint64_t srA, uint64_t scA, uint64_t s
   sent++;
 }
 
-void Master::work(cown_ptr<Master> self, uint64_t priority, uint64_t srA, uint64_t scA, uint64_t srB, uint64_t scB, uint64_t srC, uint64_t scC, uint64_t length, uint64_t dimension) {
-  when(self) << [=](acquired_cown<Master> self) {
+void Master::work(const cown_ptr<Master>& self, uint64_t priority, uint64_t srA, uint64_t scA, uint64_t srB, uint64_t scB, uint64_t srC, uint64_t scC, uint64_t length, uint64_t dimension) {
+  when(self) << [=](acquired_cown<Master> self)  mutable{
     self->send_work(priority, srA, scA, srB, scB, srC, scC, length, dimension);
   };
 }
 
-void Master::done(cown_ptr<Master> self) {
-  when(self) << [](acquired_cown<Master> self) {
+void Master::done(const cown_ptr<Master>& self) {
+  when(self) << [](acquired_cown<Master> self)  mutable{
     if (--self->num_workers == 0) {
       /* done */
     }
   };
 }
 
-void Worker::work(cown_ptr<Worker> self, uint64_t priority, uint64_t srA, uint64_t scA, uint64_t srB, uint64_t scB, uint64_t srC, uint64_t scC, uint64_t length, uint64_t dimension) {
+void Worker::work(const cown_ptr<Worker>& self, uint64_t priority, uint64_t srA, uint64_t scA, uint64_t srB, uint64_t scB, uint64_t srC, uint64_t scC, uint64_t length, uint64_t dimension) {
   when(self) << [=] (acquired_cown<Worker> self) mutable {
     if (length > self->threshold) {
       auto new_priority = priority + 1;

@@ -16,12 +16,12 @@ struct ForkJoinMaster {
 
   ForkJoinMaster(uint64_t workers): workers(workers) {}
   static void make(uint64_t workers);
-  static void done(cown_ptr<ForkJoinMaster>);
+  static void done(const cown_ptr<ForkJoinMaster>&);
 };
 
 namespace ForkJoin {
-  static void make(cown_ptr<ForkJoinMaster> master, Token token) {
-    when() << [master]() { // this isn't forking, it's all done in one thread
+  static void make(const cown_ptr<ForkJoinMaster>& master, Token token) {
+    when() << [master]()  mutable{
       double n = sin(double(37.2));
       double r = n * n;
       ForkJoinMaster::done(master);
@@ -37,8 +37,8 @@ void ForkJoinMaster::make(uint64_t workers) {
   }
 }
 
-void ForkJoinMaster::done(cown_ptr<ForkJoinMaster> self) {
-  when(self) << [](acquired_cown<ForkJoinMaster> self) {
+void ForkJoinMaster::done(const cown_ptr<ForkJoinMaster>& self) {
+  when(self) << [](acquired_cown<ForkJoinMaster> self)  mutable{
     self->workers--;
   };
 }
