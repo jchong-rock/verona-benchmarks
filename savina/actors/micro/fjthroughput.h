@@ -44,7 +44,7 @@ struct FjthrMaster {
 
   static void done(const cown_ptr<FjthrMaster>& self) {
     when(self) << [](acquired_cown<FjthrMaster> self)  mutable{
-      if (--self->total = 0) { /* done */ }
+      if (--self->total == 0) { /* done */ }
     };
   }
 };
