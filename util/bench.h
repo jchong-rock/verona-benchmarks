@@ -29,6 +29,8 @@ struct CSVWriter: public Writer {
   void writeEntry(std::string benchmark, double mean, double median, double error, double stddev) override {
     std::cout << benchmark << "," << mean << "," << median << "," << error << std::endl;
   }
+
+  ~CSVWriter() {}
 };
 
 struct ConsoleWriter: public Writer {
@@ -42,6 +44,8 @@ struct ConsoleWriter: public Writer {
               << stddev
               << std::endl;
   }
+
+  ~ConsoleWriter() {}
 };
 
 struct BenchmarkHarness {
