@@ -9,7 +9,7 @@ struct Account;
 struct Teller;
 
 struct StashToken {
-  virtual void requeue(cown_ptr<Account>&)=0;
+  virtual void requeue(cown_ptr<Account>)=0;
   virtual ~StashToken() {}
 };
 
@@ -21,9 +21,9 @@ struct Account {
 
   Account(uint64_t index, double balance): balance(balance), index(index), stash_mode(false) {}
 
-  static void debit(cown_ptr<Account>&, cown_ptr<Account>&, cown_ptr<Teller>&, double);
-  static void credit(cown_ptr<Account>&, cown_ptr<Teller>&, double, cown_ptr<Account>&);
-  static void reply(cown_ptr<Account>&, cown_ptr<Teller>&);
+  static void debit(cown_ptr<Account>, cown_ptr<Account>, cown_ptr<Teller>, double);
+  static void credit(cown_ptr<Account>, cown_ptr<Teller>, double, cown_ptr<Account>);
+  static void reply(cown_ptr<Account>, cown_ptr<Teller>);
 };
 
 struct DebitMessage: public StashToken {
@@ -31,9 +31,9 @@ struct DebitMessage: public StashToken {
   cown_ptr<Teller> teller;
   double amount;
 
-  DebitMessage(cown_ptr<Account>& account, cown_ptr<Teller>& teller, double amount): account(account), teller(teller), amount(amount) {}
+  DebitMessage(cown_ptr<Account> account, cown_ptr<Teller> teller, double amount): account(std::move(account)), teller(std::move(teller)), amount(amount) {}
 
-  void requeue(cown_ptr<Account>& receiver) override { Account::debit(receiver, account, teller, amount); }
+  void requeue(cown_ptr<Account> receiver) override { Account::debit(std::move(receiver), std::move(account), std::move(teller), amount); }
 };
 
 struct CreditMessage: public StashToken {
@@ -41,9 +41,9 @@ struct CreditMessage: public StashToken {
   cown_ptr<Teller> teller;
   double amount;
 
-  CreditMessage(cown_ptr<Account>& account, cown_ptr<Teller>& teller, double amount): account(account), teller(teller), amount(amount) {}
+  CreditMessage(cown_ptr<Account> account, cown_ptr<Teller> teller, double amount): account(std::move(account)), teller(std::move(teller)), amount(amount) {}
 
-  void requeue(cown_ptr<Account>& receiver) override { Account::credit(receiver, teller, amount, account); }
+  void requeue(cown_ptr<Account> receiver) override { Account::credit(std::move(receiver), std::move(teller), amount, std::move(account)); }
 };
 
 struct Teller {
@@ -78,7 +78,7 @@ struct Teller {
     };
   }
 
-  static void reply(cown_ptr<Teller>& self) {
+  static void reply(cown_ptr<Teller> self) {
     when(self) << [](acquired_cown<Teller> self) {
       self->completed++;
       if (self->completed == self->transactions) {
@@ -88,30 +88,30 @@ struct Teller {
   }
 };
 
-void Account::debit(cown_ptr<Account>& self, cown_ptr<Account>& account, cown_ptr<Teller>& teller, double amount) {
-  when(self) << [account, teller, amount](acquired_cown<Account> self) mutable {
+void Account::debit(cown_ptr<Account> self, cown_ptr<Account> account, cown_ptr<Teller> teller, double amount) {
+  when(self) << [account = std::move(account), teller = std::move(teller), amount](acquired_cown<Account> self) mutable {
     if (!self->stash_mode) {
       self->balance += amount;
-      Account::reply(account, teller);
+      Account::reply(std::move(account), std::move(teller));
     } else {
-      self->stash.push_back(std::make_unique<DebitMessage>(account, teller, amount));
+      self->stash.push_back(std::make_unique<DebitMessage>(std::move(account), std::move(teller), amount));
     }
   };
 }
 
-void Account::credit(cown_ptr<Account>& self, cown_ptr<Teller>& teller, double amount, cown_ptr<Account>& destination) {
-  when(self) << [tag = self, teller, amount, destination](acquired_cown<Account> self) mutable {
+void Account::credit(cown_ptr<Account> self, cown_ptr<Teller> teller, double amount, cown_ptr<Account> destination) {
+  when(self) << [teller = std::move(teller), amount, destination = std::move(destination)](acquired_cown<Account> self) mutable {
     if (!self->stash_mode) {
       self->balance -= amount;
-      Account::debit(destination, tag, teller, amount);
+      Account::debit(std::move(destination), self.cown(), std::move(teller), amount);
       self->stash_mode = true;
     } else {
-      self->stash.push_back(std::make_unique<CreditMessage>(destination, teller, amount));
+      self->stash.push_back(std::make_unique<CreditMessage>(std::move(destination), std::move(teller), amount));
     }
   };
 }
 
-void Account::reply(cown_ptr<Account>& self, cown_ptr<Teller>& teller) {
+void Account::reply(cown_ptr<Account> self, cown_ptr<Teller> teller) {
   when(self) << [tag=self, teller](acquired_cown<Account> self) mutable {
     Teller::reply(teller);
     while(!self->stash.empty())
