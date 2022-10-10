@@ -32,7 +32,7 @@ struct CSVWriter: public Writer {
 };
 
 struct ConsoleWriter: public Writer {
-  void writeHeader() { }
+  void writeHeader() override { }
 
   void writeEntry(std::string benchmark, double mean, double median, double error, double stddev) override {
     std::cout << benchmark << "   "
