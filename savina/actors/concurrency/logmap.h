@@ -57,7 +57,7 @@ struct LogmapMaster {
     when(master) << [tag=master,terms, series, rate, increment](acquired_cown<LogmapMaster> master)  mutable {
       for (uint64_t j = 0; j < series; ++j) {
         double start_term = (double)j * increment;
-        master->workers.push_back(make_cown<SeriesWorker>(tag, make_cown<RateComputer>(rate + start_term), start_term));
+        master->workers.emplace_back(make_cown<SeriesWorker>(tag, make_cown<RateComputer>(rate + start_term), start_term));
 
       }
     };

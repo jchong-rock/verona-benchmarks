@@ -32,7 +32,7 @@ struct Arbiter {
   static void add_smokers(const cown_ptr<Arbiter>& self, uint64_t num_smokers) {
     when(self) << [tag=self, num_smokers](acquired_cown<Arbiter> self)  mutable{
       for (uint64_t i = 0; i < num_smokers; ++i)
-        self->smokers.push_back(make_cown<Smoker>(tag));
+        self->smokers.emplace_back(make_cown<Smoker>(tag));
     };
   }
 

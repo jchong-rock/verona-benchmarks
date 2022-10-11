@@ -104,7 +104,7 @@ cown_ptr<Master> Master::make(uint64_t workers, uint64_t data_length, uint64_t t
     master->matrix_b = b;
 
     for (uint64_t k = 0; k < workers; ++k) {
-      master->workers.push_back(make_cown<Worker>(tag, master->collector, a, b, threshold));
+      master->workers.emplace_back(make_cown<Worker>(tag, master->collector, a, b, threshold));
     }
 
     master->send_work(0, 0, 0, 0, 0, 0, 0, master->num_blocks, data_length);
@@ -165,7 +165,7 @@ void Worker::work(const cown_ptr<Worker>& self, uint64_t priority, uint64_t srA,
             k++;
           }
 
-          partial_result.push_back(make_tuple(i, j, product));
+          partial_result.emplace_back(make_tuple(i, j, product));
           j++;
         }
 

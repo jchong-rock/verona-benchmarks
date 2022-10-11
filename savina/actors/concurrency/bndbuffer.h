@@ -24,7 +24,7 @@ struct Manager {
   std::deque<std::tuple<cown_ptr<Producer>, double>> pendingData;
   size_t adjusted;
 
-  Manager(uint64_t buffersize, uint64_t producers): producer_count(producers), adjusted(buffersize - producers) {}
+  Manager(uint64_t buffersize, uint64_t producer_count): producer_count(producer_count), adjusted(buffersize - producer_count) {}
 
   static cown_ptr<Manager> make_manager(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
   static void data(const cown_ptr<Manager>&, cown_ptr<Producer>&, double item);
@@ -97,14 +97,14 @@ cown_ptr<Manager> Manager::make_manager(uint64_t buffersize, uint64_t producers,
     {
       cown_ptr<Producer> producer = make_cown<Producer>(tag, items, producercosts);
       Producer::produce(producer);
-      self->producers.push_back(producer);
+      self->producers.emplace_back(std::move(producer));
     }
 
     for (uint64_t i = 0; i < consumers; i++)
     {
       cown_ptr<Consumer> consumer = make_cown<Consumer>(tag, consumercosts);
       self->consumers.push_back(consumer);
-      self->availableConsumers.push_back(consumer);
+      self->availableConsumers.emplace_back(std::move(consumer));
     }
   };
 
@@ -119,15 +119,15 @@ void Manager::complete() {
 void Manager::data(const cown_ptr<Manager>& self, cown_ptr<Producer>& producer, double item) {
   when(self) << [producer, item](acquired_cown<Manager> self)  mutable {
     if (self->availableConsumers.empty()) {
-      self->pendingData.push_back(std::make_tuple(producer, item));
+      self->pendingData.emplace_back(std::make_tuple(producer, item));
     } else {
-      cown_ptr<Consumer> consumer = self->availableConsumers.front();
+      cown_ptr<Consumer> consumer = std::move(self->availableConsumers.front());
       self->availableConsumers.pop_front();
       Consumer::data(consumer, producer, item);
     }
 
     if (self->pendingData.size() >= self->adjusted) {
-      self->availableProducers.push_back(producer);
+      self->availableProducers.emplace_back(std::move(producer));
     } else {
       Producer::produce(producer);
     }
@@ -137,17 +137,17 @@ void Manager::data(const cown_ptr<Manager>& self, cown_ptr<Producer>& producer, 
 void Manager::available(const cown_ptr<Manager>& self, cown_ptr<Consumer>& consumer) {
   when(self) << [consumer](acquired_cown<Manager> self)  mutable {
     if (self->pendingData.empty()) {
-      self->availableConsumers.push_back(consumer);
+      self->availableConsumers.emplace_back(std::move(consumer));
       self->complete();
     } else {
       cown_ptr<Producer> producer;
       double item;
-      std::tie(producer, item) = self->pendingData.front();
+      std::tie(producer, item) =  std::move(self->pendingData.front());
       self->pendingData.pop_front();
       Consumer::data(consumer, producer, item);
 
       if (!self->availableProducers.empty()) {
-        cown_ptr<Producer> producer = self->availableProducers.front();
+        cown_ptr<Producer> producer = std::move(self->availableProducers.front());
         self->availableProducers.pop_front();
         Producer::produce(producer);
       }

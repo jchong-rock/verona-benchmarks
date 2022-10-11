@@ -32,7 +32,7 @@ struct FjthrMaster {
     vector<cown_ptr<Throughput>> throughputs;
 
     for (uint64_t i = 0; i < actors; ++i) {
-      throughputs.push_back(make_cown<Throughput>(master));
+      throughputs.emplace_back(make_cown<Throughput>(master));
     }
 
     for (uint64_t j = 0; j < messages; ++j) {

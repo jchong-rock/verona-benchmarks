@@ -221,7 +221,7 @@ struct Branch {
     for (uint64_t i = 0; i < channels; ++i) {
       index = i;
 
-      banks.push_back(make_cown<Bank>(i, columns, h[index], f[index], integrator));
+      banks.emplace_back(make_cown<Bank>(i, columns, h[index], f[index], integrator));
     }
   }
 
@@ -481,7 +481,7 @@ struct Branch {
     for (uint64_t i = 0; i < channels; ++i) {
       index = i;
 
-      banks.push_back(make_cown<Bank>(i, columns, h[index], f[index], integrator));
+      banks.emplace_back(make_cown<Bank>(i, columns, h[index], f[index], integrator));
     }
   }
 

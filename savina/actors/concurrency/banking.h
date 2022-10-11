@@ -58,7 +58,7 @@ struct Teller {
 
     for (uint64_t i = 0; i < num_accounts; i++)
     {
-      accounts.push_back(make_cown<Account>(i, initial_balance));
+      accounts.emplace_back(make_cown<Account>(i, initial_balance));
     }
   }
 
@@ -84,6 +84,7 @@ struct Teller {
     when(self) << [](acquired_cown<Teller> self) {
       self->completed++;
       if (self->completed == self->transactions) {
+        abort();
         return;
       }
     };
@@ -96,7 +97,7 @@ void Account::debit(cown_ptr<Account> self, cown_ptr<Account> account, cown_ptr<
       self->balance += amount;
       Account::reply(std::move(account), std::move(teller));
     } else {
-      self->stash.push_back(std::make_unique<DebitMessage>(std::move(account), std::move(teller), amount));
+      self->stash.emplace_back(std::make_unique<DebitMessage>(std::move(account), std::move(teller), amount));
     }
   };
 }
@@ -108,7 +109,7 @@ void Account::credit(cown_ptr<Account> self, cown_ptr<Teller> teller, double amo
       Account::debit(std::move(destination), self.cown(), std::move(teller), amount);
       self->stash_mode = true;
     } else {
-      self->stash.push_back(std::make_unique<CreditMessage>(std::move(destination), std::move(teller), amount));
+      self->stash.emplace_back(std::make_unique<CreditMessage>(std::move(destination), std::move(teller), amount));
     }
   };
 }

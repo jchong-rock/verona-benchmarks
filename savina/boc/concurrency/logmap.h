@@ -20,8 +20,8 @@ struct SeriesWorker {
 
   SeriesWorker(double term): term(term) {}
 
-  static void next(cown_ptr<SeriesWorker> worker, cown_ptr<RateComputer> computer) {
-    when(worker, computer) << [] (acquired_cown<SeriesWorker> worker, acquired_cown<RateComputer> computer){
+  static void next(const cown_ptr<SeriesWorker>& worker, const cown_ptr<RateComputer>& computer) {
+    when(worker, computer) << [] (acquired_cown<SeriesWorker> worker, acquired_cown<RateComputer> computer) mutable{
       worker->term = computer->compute(worker->term);
     };
   }
@@ -34,8 +34,8 @@ namespace LogmapMaster {
 
     for (uint64_t j = 0; j < series; ++j) {
       double start_term = (double)j * increment;
-      workers.push_back(make_cown<SeriesWorker>(start_term));
-      computers.push_back(make_cown<RateComputer>(rate + start_term));
+      workers.emplace_back(make_cown<SeriesWorker>(start_term));
+      computers.emplace_back(make_cown<RateComputer>(rate + start_term));
     }
 
     for(uint64_t i = 0; i < terms; ++i)
@@ -44,7 +44,7 @@ namespace LogmapMaster {
 
     cown_ptr<double> sum = make_cown<double>(0);
     for(uint64_t k = 0; k < workers.size(); ++k) {
-      when(sum, workers[k]) << [](acquired_cown<double> sum, acquired_cown<SeriesWorker> worker) {
+      when(sum, workers[k]) << [](acquired_cown<double> sum, acquired_cown<SeriesWorker> worker)  mutable{
         sum += worker->term;
       };
     }

@@ -34,11 +34,11 @@ struct Manager {
   Manager(uint64_t buffersize, uint64_t producers, uint64_t consumers): producer_count(producers), consumer_count(consumers), adjusted(buffersize - producers) {}
 
   static cown_ptr<Manager> make_manager(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
-  static void data(cown_ptr<Manager>, cown_ptr<Producer>);
-  static void available(cown_ptr<Manager>, cown_ptr<Consumer>);
-  static void exit(cown_ptr<Manager>);
+  static void data(const cown_ptr<Manager>&, const cown_ptr<Producer>&);
+  static void available(const cown_ptr<Manager>&, const cown_ptr<Consumer>&);
+  static void exit(const cown_ptr<Manager>&);
 
-  static void rendezvous(cown_ptr<Producer>, cown_ptr<Consumer>);
+  static void rendezvous(const cown_ptr<Producer>&, const cown_ptr<Consumer>&);
 
   void complete();
 };
@@ -68,7 +68,7 @@ struct Producer {
   const cown_ptr<Manager> manager;
   const uint64_t costs;
 
-  Producer(cown_ptr<Manager> manager, uint64_t items, uint64_t costs): last(0), items(items), manager(manager), costs(costs){}
+  Producer(const cown_ptr<Manager>& manager, uint64_t items, uint64_t costs): last(0), items(items), manager(manager), costs(costs){}
 
   double produce() {
     last = ItemProcessor(last, costs);
@@ -76,7 +76,7 @@ struct Producer {
     return last;
   }
 
-  void release(cown_ptr<Producer> self) {
+  void release(const cown_ptr<Producer>& self) {
     if (items > 0) {
       Manager::data(manager, self);
     } else {
@@ -87,16 +87,16 @@ struct Producer {
 
 struct Consumer {
   double last;
-  const cown_ptr<Manager> manager;
+  cown_ptr<Manager> manager;
   const uint64_t costs;
 
-  Consumer(cown_ptr<Manager> manager, uint64_t costs): last(0), manager(manager), costs(costs) {}
+  Consumer(const cown_ptr<Manager>& manager, uint64_t costs): last(0), manager(manager), costs(costs) {}
 
   void consume(double item) {
     last = ItemProcessor(last + item, costs);
   }
 
-  void release(cown_ptr<Consumer> self) {
+  void release(const cown_ptr<Consumer>& self) {
     Manager::available(manager, self);
   }
 
@@ -105,16 +105,16 @@ struct Consumer {
 cown_ptr<Manager> Manager::make_manager(uint64_t buffersize, uint64_t producers, uint64_t consumers, uint64_t items, uint64_t producercosts, uint64_t consumercosts) {
   cown_ptr<Manager> self = make_cown<Manager>(buffersize, producers, consumers);
 
-  when(self) << [tag=self, producers, consumers, items, producercosts, consumercosts](acquired_cown<Manager> self) {
+  when(self) << [tag=self, producers, consumers, items, producercosts, consumercosts](acquired_cown<Manager> self)  mutable {
     for (uint64_t i = 0; i < producers; i++)
     {
-      cown_ptr<Producer> producer = make_cown<Producer>(tag, items, producercosts);
+      const cown_ptr<Producer>& producer = make_cown<Producer>(tag, items, producercosts);
       Manager::data(tag, producer);
     }
 
     for (uint64_t i = 0; i < consumers; i++)
     {
-      cown_ptr<Consumer> consumer = make_cown<Consumer>(tag, consumercosts);
+      const cown_ptr<Consumer>& consumer = make_cown<Consumer>(tag, consumercosts);
       self->availableConsumers.push_back(consumer);
     }
   };
@@ -127,16 +127,16 @@ void Manager::complete() {
     return;
 }
 
-void Manager::rendezvous(cown_ptr<Producer> producer, cown_ptr<Consumer> consumer) {
-  when(consumer, producer) << [ctag=consumer, ptag=producer](acquired_cown<Consumer> consumer, acquired_cown<Producer> producer) {
+void Manager::rendezvous(const cown_ptr<Producer>& producer, const cown_ptr<Consumer>& consumer) {
+  when(consumer, producer) << [ctag=consumer, ptag=producer](acquired_cown<Consumer> consumer, acquired_cown<Producer> producer)  mutable {
     consumer->consume(producer->produce());
     consumer->release(ctag);
     producer->release(ptag);
   };
 }
 
-void Manager::data(cown_ptr<Manager> self, cown_ptr<Producer> producer) {
-  when(self) << [producer](acquired_cown<Manager> self) {
+void Manager::data(const cown_ptr<Manager>& self, const cown_ptr<Producer>& producer) {
+  when(self) << [producer](acquired_cown<Manager> self)  mutable {
     if (self->availableConsumers.empty()) {
       if (self->availableProducers.size() < self->adjusted)
         self->availableProducers.push_back(producer);
@@ -150,8 +150,8 @@ void Manager::data(cown_ptr<Manager> self, cown_ptr<Producer> producer) {
   };
 }
 
-void Manager::available(cown_ptr<Manager> self, cown_ptr<Consumer> consumer) {
-  when(self) << [consumer](acquired_cown<Manager> self) {
+void Manager::available(const cown_ptr<Manager>& self, const cown_ptr<Consumer>& consumer) {
+  when(self) << [consumer](acquired_cown<Manager> self)  mutable {
     if (self->availableProducers.empty()) {
       self->availableConsumers.push_back(consumer);
       self->complete();
@@ -163,15 +163,15 @@ void Manager::available(cown_ptr<Manager> self, cown_ptr<Consumer> consumer) {
       if (!self->pendingProducers.empty()) {
         cown_ptr<Producer> producer = self->pendingProducers.front();
         self->pendingProducers.pop_front();
-        when(producer) << [tag=producer](acquired_cown<Producer> producer){ producer->release(tag); };
+        when(producer) << [tag=producer](acquired_cown<Producer> producer) mutable { producer->release(tag); };
         // self->availableProducers.push_back(producer);
       }
     }
   };
 }
 
-void Manager::exit(cown_ptr<Manager> self) {
-  when(self) << [](acquired_cown<Manager> self) {
+void Manager::exit(const cown_ptr<Manager>& self) {
+  when(self) << [](acquired_cown<Manager> self)  mutable {
     self->producer_count--;
     self->complete();
   };
@@ -257,7 +257,7 @@ struct Consumer {
 cown_ptr<Manager> Manager::make_manager(uint64_t buffersize, uint64_t producers, uint64_t consumers, uint64_t items, uint64_t producercosts, uint64_t consumercosts) {
   cown_ptr<Manager> self = make_cown<Manager>(buffersize, producers, consumers);
 
-  when(self) << [tag=self, producers, consumers, items, producercosts, consumercosts](acquired_cown<Manager> self) {
+  when(self) << [tag=self, producers, consumers, items, producercosts, consumercosts](acquired_cown<Manager> self)  mutable {
     for (uint64_t i = 0; i < producers; i++)
     {
       Manager::data(tag, make_unique<Producer>(tag, items, producercosts));
@@ -265,7 +265,7 @@ cown_ptr<Manager> Manager::make_manager(uint64_t buffersize, uint64_t producers,
 
     for (uint64_t i = 0; i < consumers; i++)
     {
-      self->pendingConsumers.push_back(make_unique<Consumer>(tag, consumercosts));
+      self->pendingConsumers.emplace_back(make_unique<Consumer>(tag, consumercosts));
     }
   };
 
@@ -308,7 +308,7 @@ void Manager::available(cown_ptr<Manager> self, unique_ptr<Consumer> consumer) {
 }
 
 void Manager::exit(cown_ptr<Manager> self) {
-  when(self) << [](acquired_cown<Manager> self) {
+  when(self) << [](acquired_cown<Manager> self)  mutable {
     self->producer_count--;
     self->complete();
   };

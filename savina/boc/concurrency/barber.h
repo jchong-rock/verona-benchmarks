@@ -21,18 +21,18 @@ struct CustomerFactory {
   uint64_t attempts;
   cown_ptr<WaitingRoom> room;
 
-  CustomerFactory(uint64_t number_of_haircuts, cown_ptr<WaitingRoom> room):
+  CustomerFactory(uint64_t number_of_haircuts, const cown_ptr<WaitingRoom>& room):
     number_of_haircuts(number_of_haircuts), attempts(0), room(room) {}
 
-  static void run(cown_ptr<CustomerFactory>, uint64_t);
-  static void returned(cown_ptr<CustomerFactory>, unique_ptr<Customer>);
-  static void left(cown_ptr<CustomerFactory>, unique_ptr<Customer>);
+  static void run(const cown_ptr<CustomerFactory>&, uint64_t);
+  static void returned(const cown_ptr<CustomerFactory>&, unique_ptr<Customer>);
+  static void left(const cown_ptr<CustomerFactory>&, unique_ptr<Customer>);
 };
 
 struct Customer {
   cown_ptr<CustomerFactory> factory;
 
-  Customer(cown_ptr<CustomerFactory> factory): factory(factory) {}
+  Customer(const cown_ptr<CustomerFactory>& factory): factory(factory) {}
 
   static void full(unique_ptr<Customer>);
   static void pay_and_leave(unique_ptr<Customer>);
@@ -45,7 +45,7 @@ struct Barber {
 
   Barber(uint64_t haircut_rate): haircut_rate(haircut_rate) {}
 
-  static void wait(cown_ptr<Barber>);
+  static void wait(const cown_ptr<Barber>&);
 };
 
 static uint64_t BusyWaiter(uint64_t wait) {
@@ -64,9 +64,9 @@ struct WaitingRoom {
   std::deque<unique_ptr<Customer>> customers;
   cown_ptr<Barber> barber;
 
-  WaitingRoom(uint64_t size, cown_ptr<Barber> barber): size(size), barber(barber) {}
+  WaitingRoom(uint64_t size, const cown_ptr<Barber>& barber): size(size), barber(barber) {}
 
-  static void enter(cown_ptr<WaitingRoom> wr, unique_ptr<Customer> customer) {
+  static void enter(const cown_ptr<WaitingRoom>& wr, unique_ptr<Customer> customer) {
     when(wr) << [tag=wr, customer=move(customer)](acquired_cown<WaitingRoom> wr) mutable {
       if (wr->customers.size() == wr->size) {
         Customer::full(move(customer));
@@ -77,7 +77,7 @@ struct WaitingRoom {
     };
   }
 
-  static void next(cown_ptr<WaitingRoom> wr, cown_ptr<Barber> barber) {
+  static void next(const cown_ptr<WaitingRoom>& wr, const cown_ptr<Barber>& barber) {
     // starves a customer waiting to sit down
     when(wr, barber) << [wr_tag=wr, barber_tag=barber](acquired_cown<WaitingRoom> wr, acquired_cown<Barber> barber) mutable {
       if (wr->customers.size() > 0) {
@@ -92,9 +92,9 @@ struct WaitingRoom {
   }
 };
 
-void Barber::wait(cown_ptr<Barber> self) { when(self) << [](acquired_cown<Barber>){}; }
+void Barber::wait(const cown_ptr<Barber>& self) { when(self) << [](acquired_cown<Barber>){}; }
 
-void CustomerFactory::returned(cown_ptr<CustomerFactory> factory, unique_ptr<Customer> customer) {
+void CustomerFactory::returned(const cown_ptr<CustomerFactory>& factory, unique_ptr<Customer> customer) {
   when(factory) << [customer=move(customer)](acquired_cown<CustomerFactory> factory) mutable {
     factory->attempts++;
     WaitingRoom::enter(factory->room, move(customer));
@@ -102,7 +102,7 @@ void CustomerFactory::returned(cown_ptr<CustomerFactory> factory, unique_ptr<Cus
 }
 
 // TODO: in verona we don't need to send a message back to the framework
-void CustomerFactory::left(cown_ptr<CustomerFactory> factory, unique_ptr<Customer> customer) {
+void CustomerFactory::left(const cown_ptr<CustomerFactory>& factory, unique_ptr<Customer> customer) {
   when(factory) << [](acquired_cown<CustomerFactory> factory) {
     factory->number_of_haircuts--;
     if (factory->number_of_haircuts == 0) {
@@ -112,7 +112,7 @@ void CustomerFactory::left(cown_ptr<CustomerFactory> factory, unique_ptr<Custome
   };
 }
 
-void CustomerFactory::run(cown_ptr<CustomerFactory> factory, uint64_t rate) {
+void CustomerFactory::run(const cown_ptr<CustomerFactory>& factory, uint64_t rate) {
   when(factory) << [tag=factory, rate](acquired_cown<CustomerFactory> factory) mutable {
     for (uint64_t i = 0; i < factory->number_of_haircuts; ++i) {
       factory->attempts++;
@@ -139,18 +139,18 @@ struct CustomerFactory {
   CustomerFactory(uint64_t number_of_haircuts, cown_ptr<WaitingRoom> room):
     number_of_haircuts(number_of_haircuts), attempts(0), room(room) {}
 
-  static void run(cown_ptr<CustomerFactory>, uint64_t);
-  static void returned(cown_ptr<CustomerFactory>, cown_ptr<Customer>);
-  static void left(cown_ptr<CustomerFactory>, cown_ptr<Customer>);
+  static void run(const cown_ptr<CustomerFactory>&, uint64_t);
+  static void returned(const cown_ptr<CustomerFactory>&, const cown_ptr<Customer>&);
+  static void left(const cown_ptr<CustomerFactory>&, const cown_ptr<Customer>&);
 };
 
 struct Customer { // things that become cowns do not know their own address
   cown_ptr<CustomerFactory> factory;
 
-  Customer(cown_ptr<CustomerFactory> factory): factory(factory) {}
+  Customer(const cown_ptr<CustomerFactory>& factory): factory(factory) {}
 
-  static void full(cown_ptr<Customer>);
-  void pay_and_leave(cown_ptr<Customer>);
+  static void full(const cown_ptr<Customer>&);
+  void pay_and_leave(const cown_ptr<Customer>&);
   void wait();
   void sit_down() {};
 };
@@ -161,8 +161,8 @@ struct Barber {
 
   Barber(uint64_t haircut_rate): haircut_rate(haircut_rate) {}
 
-  static void enter(cown_ptr<Barber>, cown_ptr<Customer>, cown_ptr<WaitingRoom>);
-  static void wait(cown_ptr<Barber>);
+  static void enter(const cown_ptr<Barber>&, const cown_ptr<Customer>&, const cown_ptr<WaitingRoom>&);
+  static void wait(const cown_ptr<Barber>&);
 };
 
 struct SleepingBarber: public AsyncBenchmark {
@@ -202,10 +202,10 @@ struct WaitingRoom {
 #endif
   cown_ptr<Barber> barber;
 
-  WaitingRoom(uint64_t size, cown_ptr<Barber> barber): size(size), barber(barber) {}
+  WaitingRoom(uint64_t size, const cown_ptr<Barber>& barber): size(size), barber(barber) {}
 
 #ifndef countversion
-  static void enter(cown_ptr<WaitingRoom> wr, cown_ptr<Customer> customer) {
+  static void enter(const cown_ptr<WaitingRoom>& wr, const cown_ptr<Customer>& customer) {
     when(wr) << [customer, tag=wr](acquired_cown<WaitingRoom> wr) {
       if (wr->customers.size() == wr->size) {
         Customer::full(customer);
@@ -217,7 +217,7 @@ struct WaitingRoom {
     };
   }
 
-  static void next(cown_ptr<WaitingRoom> wr, cown_ptr<Barber> barber) {
+  static void next(const cown_ptr<WaitingRoom>& wr, const cown_ptr<Barber>& barber) {
     when(wr, barber) << [wr_tag=wr, barber_tag=barber](acquired_cown<WaitingRoom> wr, acquired_cown<Barber> barber) {
       if(!barber->busy) {
         if (wr->customers.size() > 0) {
@@ -240,7 +240,7 @@ struct WaitingRoom {
     };
   }
 #else
-  static void enter(cown_ptr<WaitingRoom> wr, cown_ptr<Customer> customer) {
+  static void enter(const cown_ptr<WaitingRoom>& wr, const cown_ptr<Customer>& customer) {
     when(wr) << [customer, tag=wr](acquired_cown<WaitingRoom> wr) {
       if (wr->count == wr->size) {
         Customer::full(customer);
@@ -265,9 +265,9 @@ struct WaitingRoom {
 #endif
 };
 
-void Barber::wait(cown_ptr<Barber> self) { when(self) << [](acquired_cown<Barber>){}; }
+void Barber::wait(const cown_ptr<Barber>& self) { when(self) << [](acquired_cown<Barber>){}; }
 
-void CustomerFactory::returned(cown_ptr<CustomerFactory> self, cown_ptr<Customer> customer) {
+void CustomerFactory::returned(const cown_ptr<CustomerFactory>& self, const cown_ptr<Customer>& customer) {
   when(self) << [customer](acquired_cown<CustomerFactory> self) {
     self->attempts++;
     WaitingRoom::enter(self->room, customer);
@@ -275,7 +275,7 @@ void CustomerFactory::returned(cown_ptr<CustomerFactory> self, cown_ptr<Customer
 }
 
 // TODO: in verona we don't need to send a message back to the framework
-void CustomerFactory::left(cown_ptr<CustomerFactory> self, cown_ptr<Customer> customer) {
+void CustomerFactory::left(const cown_ptr<CustomerFactory>& self, const cown_ptr<Customer>& customer) {
   when(self) << [](acquired_cown<CustomerFactory> self) {
     self->number_of_haircuts--;
     if (self->number_of_haircuts == 0) {
@@ -285,7 +285,7 @@ void CustomerFactory::left(cown_ptr<CustomerFactory> self, cown_ptr<Customer> cu
   };
 }
 
-void CustomerFactory::run(cown_ptr<CustomerFactory> self, uint64_t rate) {
+void CustomerFactory::run(const cown_ptr<CustomerFactory>& self, uint64_t rate) {
   when(self) << [tag=self, rate](acquired_cown<CustomerFactory> self) {
     for (uint64_t i = 0; i < self->number_of_haircuts; ++i) {
       self->attempts++;
@@ -295,11 +295,11 @@ void CustomerFactory::run(cown_ptr<CustomerFactory> self, uint64_t rate) {
   };
 }
 
-void Customer::full(cown_ptr<Customer> self) { when(self) << [tag=self](acquired_cown<Customer> self){ CustomerFactory::returned(self->factory, tag); }; }
+void Customer::full(const cown_ptr<Customer>& self) { when(self) << [tag=self](acquired_cown<Customer> self){ CustomerFactory::returned(self->factory, tag); }; }
 
 void Customer::wait() { }
 
-void Customer::pay_and_leave(cown_ptr<Customer> self) { CustomerFactory::left(factory, self); }
+void Customer::pay_and_leave(const cown_ptr<Customer>& self) { CustomerFactory::left(factory, self); }
 #endif
 
 };

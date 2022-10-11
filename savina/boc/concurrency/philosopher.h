@@ -70,10 +70,10 @@ struct DiningPhilosophers: public AsyncBenchmark {
     cown_ptr<Fork> prev = first;
     for (uint64_t i = 0; i < philosophers - 1; ++i) {
       cown_ptr<Fork> next = make_cown<Fork>();
-      phils.push_back(make_cown<Philosopher>(i, rounds, prev, next, table));
+      phils.emplace_back(make_cown<Philosopher>(i, rounds, prev, next, table));
       prev = next;
     }
-    phils.push_back(make_cown<Philosopher>(philosophers - 1, rounds, prev, first, table));
+    phils.emplace_back(make_cown<Philosopher>(philosophers - 1, rounds, prev, first, table));
 
     while(!phils.empty()) {
       Philosopher::eat(phils.back());

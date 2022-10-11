@@ -104,7 +104,7 @@ struct DiningPhilosophers: public AsyncBenchmark {
     std::vector<cown_ptr<Philosopher>> actors;
 
     for (uint64_t i = 0; i < philosophers; ++i) {
-      actors.push_back(make_cown<Philosopher>(i, rounds, arbitator));
+      actors.emplace_back(make_cown<Philosopher>(i, rounds, arbitator));
     }
 
     for (const auto& actor: actors) {

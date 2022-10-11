@@ -35,12 +35,12 @@ struct Teller {
 
     for (uint64_t i = 0; i < num_accounts; i++)
     {
-      accounts.push_back(make_cown<Account>(initial_balance));
+      accounts.emplace_back(make_cown<Account>(initial_balance));
     }
   }
 
-  static void spawn_transactions(cown_ptr<Teller> self) {
-    when(self) << [tag=self](acquired_cown<Teller> self) {
+  static void spawn_transactions(const cown_ptr<Teller>& self) {
+    when(self) << [tag=self](acquired_cown<Teller> self)  mutable {
       for (uint64_t i = 0; i < self->transactions; i++)
       {
         // Randomly pick source and destination account
@@ -55,11 +55,11 @@ struct Teller {
         if (dest == 0)
           dest++;
 
-        cown_ptr<Account> src = self->accounts[source];
-        cown_ptr<Account> dst = self->accounts[dest];
+        const cown_ptr<Account>& src = self->accounts[source];
+        const cown_ptr<Account>& dst = self->accounts[dest];
         double amount = self->random.nextDouble() * 1000;
 
-        when(src, dst) << [amount, tag](acquired_cown<Account> src, acquired_cown<Account> dst){
+        when(src, dst) << [amount, tag](acquired_cown<Account> src, acquired_cown<Account> dst) mutable {
           src->debit(amount);
           dst->credit(amount);
           Teller::reply(tag);
@@ -69,8 +69,8 @@ struct Teller {
     };
   }
 
-  static void reply(cown_ptr<Teller> self) {
-    when(self) << [](acquired_cown<Teller> self) {
+  static void reply(const cown_ptr<Teller>& self) {
+    when(self) << [](acquired_cown<Teller> self)  mutable {
       self->completed++;
       if (self->completed == self->transactions) {
         return;

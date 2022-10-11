@@ -48,7 +48,7 @@ struct BigMaster {
     std::vector<cown_ptr<BigActor>> n;
 
     for (uint64_t i = 0; i < actors; ++i)
-      n.push_back(make_cown<BigActor>(master, i, pings));
+      n.emplace_back(make_cown<BigActor>(master, i, pings));
 
     for (const cown_ptr<BigActor>& big: n) {
       BigActor::set_neighbors(big, n);
