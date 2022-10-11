@@ -53,8 +53,8 @@ struct Teller {
   uint64_t completed;
   std::vector<cown_ptr<Account>> accounts;
 
-  Teller(double initial_balance, uint64_t num_accounts, uint64_t transactions):
-    initial_balance(initial_balance), transactions(transactions), random(SimpleRand(123456)), completed(0) {
+  Teller(double initial_balance, uint64_t num_accounts, uint64_t transactions, uint64_t seed):
+    initial_balance(initial_balance), transactions(transactions), random(SimpleRand(seed)), completed(0) {
 
     for (uint64_t i = 0; i < num_accounts; i++)
     {
@@ -66,6 +66,8 @@ struct Teller {
     when(self) << [tag=self](acquired_cown<Teller> self) mutable {
       for (uint64_t i = 0; i < self->transactions; i++)
       {
+        // Must have more than ten accounts for the following maths to work.
+        assert(self->accounts.size() > 10);
         // Randomly pick source and destination account
         uint64_t source = self->random.nextInt((self->accounts.size() / 10) * 8);
         uint64_t dest = self->random.nextInt(self->accounts.size() - source);
@@ -136,7 +138,8 @@ struct Banking: public AsyncBenchmark {
   }
 
   void run() {
-    banking::Teller::spawn_transactions(make_cown<banking::Teller>(initial, accounts, transactions));
+    auto seed = BenchmarkHarness::get_seed();
+    banking::Teller::spawn_transactions(make_cown<banking::Teller>(initial, accounts, transactions, seed));
   }
 
   std::string name() { return "Banking"; }

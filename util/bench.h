@@ -57,6 +57,11 @@ struct BenchmarkHarness {
   bool detect_leaks;
   std::unique_ptr<Writer> writer;
 
+  static uint64_t& get_seed() {
+    static uint64_t seed = 123456;
+    return seed;
+  }
+
   BenchmarkHarness(const int argc, const char** argv) : opt(argc, argv) {
     std::cout << "BenchmarkHarness starting." << std::endl;
 
@@ -65,12 +70,40 @@ struct BenchmarkHarness {
       std::cout << " " << argv[i];
     }
 
-    size_t count = opt.is<size_t>("--seed_count", 1);
+#ifdef USE_SYSTEMATIC_TESTING
+    if (opt.has("--seed"))
+    {
+      get_seed() = opt.is<size_t>("--seed", 0);
+    }
+    else
+    {
+      get_seed() = ((snmalloc::Aal::tick()) & 0xffffffff) * 1000;
+      std::cout << " --seed " << get_seed();
+    }
+#else
+    get_seed() = opt.is<size_t>("--seed", 123456);
+#endif
 
     std::cout << std::endl;
 
     cores = opt.is<size_t>("--cores", 4);
+
+#ifdef USE_SYSTEMATIC_TESTING
+    repetitions = opt.is<size_t>("--seed_count", 1);
+    if (opt.has("--reps"))
+    {
+      std::cout << "WARNING: --reps is ignored when using systematic testing" << std::endl;
+    }
+
+    if (opt.has("--log-all") || (repetitions == 1))
+      Logging::enable_logging();
+#else
     repetitions = opt.is<size_t>("--reps", 100);
+    if (opt.has("--seed_count"))
+    {
+      std::cout << "WARNING: --seed_count is ignored when not using systematic testing" << std::endl;
+    }
+#endif
 
     detect_leaks = !opt.has("--allow_leaks");
     Scheduler::set_detect_leaks(detect_leaks);
@@ -101,6 +134,11 @@ struct BenchmarkHarness {
 
       if (detect_leaks)
         snmalloc::debug_check_empty<snmalloc::Alloc::Config>();
+
+#ifdef USE_SYSTEMATIC_TESTING
+      get_seed()++;
+      printf("Seed: %zu\n", get_seed());
+#endif
     }
 
     writer->writeEntry(benchmark.name(), samples.mean(), samples.median(), samples.ref_err(), samples.stddev());
