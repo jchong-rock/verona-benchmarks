@@ -7,9 +7,9 @@ int main(const int argc, const char** argv) {
   BenchmarkHarness savina(argc, argv);
 
   // Actors
-  savina.run<actor_benchmark::Banking>(1000, 50000);
+  // savina.run<actor_benchmark::Banking>(1000, 50000);
   // savina.run<actor_benchmark::SleepingBarber>(5000, 1000, 1000, 1000);
-  // savina.run<actor_benchmark::BndBuffer>(50, 40, 40, 1000, 25, 25);
+  savina.run<actor_benchmark::BndBuffer>(50, 40, 40, 1000, 25, 25);
   // savina.run<actor_benchmark::Cigsmok>(1000, 200);
   // savina.run<actor_benchmark::Concdict>(20, 10000, 10);
   // savina.run<actor_benchmark::DiningPhilosophers>(20, 10000, 1);
