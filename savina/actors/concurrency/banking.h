@@ -84,7 +84,6 @@ struct Teller {
     when(self) << [](acquired_cown<Teller> self) {
       self->completed++;
       if (self->completed == self->transactions) {
-        abort();
         return;
       }
     };
