@@ -48,6 +48,7 @@ struct Arbiter {
       if (--self->rounds > 0) {
         Arbiter::notify_smoker(tag);
       } else {
+        self->smokers.clear();
         return;
       }
     };

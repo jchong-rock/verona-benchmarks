@@ -75,6 +75,7 @@ void BigActor::pong(const cown_ptr<BigActor>& self, int64_t n) {
       BigActor::ping(self->neighbors[index], self->index);
       self->sent++;
     } else {
+      self->neighbors.clear();
       BigMaster::done(self->master);
     }
   };

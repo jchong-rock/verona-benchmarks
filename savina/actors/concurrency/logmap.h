@@ -82,6 +82,7 @@ struct LogmapMaster {
       self->sum += term;
       self->received++;
       if(self->received == self->requested) {
+        self->workers.clear();
         // std::cout << self->sum << std::endl;
         /* done */
       }

@@ -27,6 +27,7 @@ struct RingActor {
         // assert(self->_next != nullptr); FIXME
         RingActor::pass(self->_next, left - 1);
       } else {
+        self->_next = nullptr;
         /* done */
       }
     };

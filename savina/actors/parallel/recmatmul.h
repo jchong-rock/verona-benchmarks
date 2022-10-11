@@ -126,6 +126,8 @@ void Master::work(const cown_ptr<Master>& self, uint64_t priority, uint64_t srA,
 void Master::done(const cown_ptr<Master>& self) {
   when(self) << [](acquired_cown<Master> self)  mutable{
     if (--self->num_workers == 0) {
+      self->workers.clear();
+      self->collector = nullptr;
       /* done */
     }
   };
