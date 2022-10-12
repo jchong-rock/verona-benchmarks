@@ -12,7 +12,7 @@ using namespace std;
 struct Master;
 
 struct Worker {
-  static void create(const cown_ptr<Master>& master, double left, double right, double precision);
+  static void create(cown_ptr<Master> master, double left, double right, double precision);
 };
 
 struct Master {
@@ -54,10 +54,9 @@ namespace Fx {
   }
 }
 
-// Question: is new in Pony async?? because this method was the actor constructor.
-void Worker::create(const cown_ptr<Master>& master, double left, double right, double precision) {
+void Worker::create(cown_ptr<Master> master, double left, double right, double precision) {
   auto worker = make_cown<Worker>();
-  when(worker) << [master, left, right, precision](acquired_cown<Worker> worker) mutable {
+  when(worker) << [master=move(master), left, right, precision](acquired_cown<Worker> worker) mutable {
     double n = ((right - left) / precision);
     double accumulated_area = 0.0;
 

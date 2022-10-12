@@ -100,12 +100,12 @@ cown_ptr<Master> Master::make(uint64_t workers, uint64_t data_length, uint64_t t
       b.push_back(bI);
     }
 
-    master->matrix_a = a;
-    master->matrix_b = b;
-
     for (uint64_t k = 0; k < workers; ++k) {
       master->workers.emplace_back(make_cown<Worker>(tag, master->collector, a, b, threshold));
     }
+
+    master->matrix_a = move(a);
+    master->matrix_b = move(b);
 
     master->send_work(0, 0, 0, 0, 0, 0, 0, master->num_blocks, data_length);
   };
