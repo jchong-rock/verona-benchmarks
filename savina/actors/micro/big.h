@@ -19,8 +19,8 @@ struct BigActor {
   vector<cown_ptr<BigActor>> neighbors;
   uint64_t sent;
 
-  BigActor(const cown_ptr<BigMaster>& master, int64_t index, uint64_t pings)
-    : master(master), index(index), random(index), pings(pings), sent(0) {}
+  BigActor(cown_ptr<BigMaster> master, int64_t index, uint64_t pings)
+    : master(move(master)), index(index), random(index), pings(pings), sent(0) {}
 
   static void set_neighbors(const cown_ptr<BigActor>& self, vector<cown_ptr<BigActor>> n) {
     when(self) << [n=move(n)](acquired_cown<BigActor> self) mutable {
@@ -35,34 +35,45 @@ struct BigActor {
   }
 
   static void pong(const cown_ptr<BigActor>& self, int64_t n);
+
+  static void cleanup(const cown_ptr<BigActor>& self) {
+    when(self) << [](acquired_cown<BigActor> self) mutable {
+      self->neighbors.clear();
+    };
+  }
 };
 
 struct BigMaster {
   uint64_t actors;
+
+  // Keep track of actors so we can clean them up later
+  vector<cown_ptr<BigActor>> n;
 
   BigMaster(uint64_t actors): actors(actors) {}
 
   static void make(uint64_t pings, uint64_t actors) {
     cown_ptr<BigMaster> master = make_cown<BigMaster>(actors);
 
-    std::vector<cown_ptr<BigActor>> n;
+    when(master) << [tag=master, pings, actors](acquired_cown<BigMaster> master) {
+      for (uint64_t i = 0; i < actors; ++i)
+        master->n.emplace_back(make_cown<BigActor>(tag, i, pings));
 
-    for (uint64_t i = 0; i < actors; ++i)
-      n.emplace_back(make_cown<BigActor>(master, i, pings));
+      for (const cown_ptr<BigActor>& big: master->n) {
+        BigActor::set_neighbors(big, master->n);
+      }
 
-    for (const cown_ptr<BigActor>& big: n) {
-      BigActor::set_neighbors(big, n);
-    }
-
-    for (const cown_ptr<BigActor>& big: n) {
-      BigActor::pong(big, -1);
-    }
+      for (const cown_ptr<BigActor>& big: master->n) {
+        BigActor::pong(big, -1);
+      }
+    };
   }
 
   static void done(const cown_ptr<BigMaster>& self) {
     when(self) << [](acquired_cown<BigMaster> self)  mutable{
       if(--self->actors == 0) {
-        /* done */
+        for (const cown_ptr<BigActor>& actor: self->n)
+          BigActor::cleanup(actor);
+        self->n.clear();
       }
     };
   }
@@ -75,7 +86,6 @@ void BigActor::pong(const cown_ptr<BigActor>& self, int64_t n) {
       BigActor::ping(self->neighbors[index], self->index);
       self->sent++;
     } else {
-      self->neighbors.clear();
       BigMaster::done(self->master);
     }
   };
