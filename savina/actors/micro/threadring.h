@@ -15,9 +15,9 @@ struct RingActor {
 
   RingActor(const cown_ptr<RingActor>& next): _next(next) {}
 
-  static void next(const cown_ptr<RingActor>& self, const cown_ptr<RingActor>& neighbor) {
-    when(self) << [neighbor](acquired_cown<RingActor> self)  mutable{
-      self->_next = neighbor;
+  static void next(const cown_ptr<RingActor>& self, cown_ptr<RingActor> neighbor) {
+    when(self) << [neighbor=move(neighbor)](acquired_cown<RingActor> self)  mutable{
+      self->_next = move(neighbor);
     };
   }
 
@@ -49,11 +49,11 @@ struct ThreadRing: public AsyncBenchmark {
     auto next = first;
 
     for (uint64_t k = 0; k < actors - 1; ++k) {
-      auto current = make_cown<RingActor>(next);
+      auto current = make_cown<RingActor>(move(next));
       next = current;
     }
 
-    RingActor::next(first, next);
+    RingActor::next(first, move(next));
 
     if (pass > 0) {
       RingActor::pass(first, pass);

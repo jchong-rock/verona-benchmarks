@@ -24,8 +24,8 @@ struct Source {
   uint64_t max;
   uint64_t current;
 
-  Source(const cown_ptr<Producer>& producer, const cown_ptr<Branch>& branch):
-    producer(producer), branch(branch), max(1000), current(0) {}
+  Source(const cown_ptr<Producer> producer, const cown_ptr<Branch> branch):
+    producer(move(producer)), branch(move(branch)), max(1000), current(0) {}
 
   static void boot(const cown_ptr<Source>& self);
 };
@@ -36,8 +36,8 @@ struct Producer {
 
   Producer(uint64_t simulations): simulations(simulations), sent(0) {}
 
-  static void next(const cown_ptr<Producer>& self, const cown_ptr<Source>& source) {
-    when(self) << [source](acquired_cown<Producer> self)  mutable {
+  static void next(const cown_ptr<Producer>& self, cown_ptr<Source> source) {
+    when(self) << [source=move(source)](acquired_cown<Producer> self)  mutable {
       if (self->sent < self->simulations) {
         Source::boot(source);
         self->sent++;
@@ -84,7 +84,7 @@ struct Integrator {
   cown_ptr<Combine> combine;
   deque<unique_ptr<unordered_map<uint64_t, uint64_t>>> data;
 
-  Integrator(uint64_t channels, cown_ptr<Combine> combine): channels(channels), combine(combine) {}
+  Integrator(uint64_t channels, cown_ptr<Combine> combine): channels(channels), combine(move(combine)) {}
 
   static void value(const cown_ptr<Integrator>& self, uint64_t id, uint64_t n) {
     when(self) << [id, n](acquired_cown<Integrator> self) mutable {
@@ -143,7 +143,7 @@ struct Delay {
   vector<uint64_t> state;
   uint64_t placeholder;
 
-  Delay(uint64_t length, const cown_ptr<FirFilter>& filter): length(length), filter(filter), state(length, 0), placeholder(0) {}
+  Delay(uint64_t length, const cown_ptr<FirFilter> filter): length(length), filter(move(filter)), state(length, 0), placeholder(0) {}
 
   static void value(const cown_ptr<Delay>& self, uint64_t n) {
     when(self) << [n](acquired_cown<Delay> self)  mutable {
@@ -160,7 +160,7 @@ struct SampleFilter {
 
   uint64_t samples_received;
 
-  SampleFilter(uint64_t rate, const cown_ptr<Delay>& delay): rate(rate), delay(delay), samples_received(0) {}
+  SampleFilter(uint64_t rate, cown_ptr<Delay> delay): rate(rate), delay(move(delay)), samples_received(0) {}
 
   static void value(const cown_ptr<SampleFilter>& self, uint64_t n) {
     when(self) << [n](acquired_cown<SampleFilter> self)  mutable {
@@ -179,7 +179,7 @@ struct TaggedForward {
   uint64_t id;
   cown_ptr<Integrator> integrator;
 
-  TaggedForward(uint64_t id, const cown_ptr<Integrator>& integrator): id(id), integrator(integrator) {}
+  TaggedForward(uint64_t id, cown_ptr<Integrator> integrator): id(id), integrator(move(integrator)) {}
 
   static void value(const cown_ptr<TaggedForward>& self, uint64_t n) {
     when(self) << [n](acquired_cown<TaggedForward> self)  mutable {
@@ -191,13 +191,13 @@ struct TaggedForward {
 struct Bank {
   cown_ptr<Delay> entry;
 
-  Bank(uint64_t id, uint64_t columns, vector<uint64_t> h, vector<uint64_t> f, const cown_ptr<Integrator>& integrator)
+  Bank(uint64_t id, uint64_t columns, vector<uint64_t> h, vector<uint64_t> f, cown_ptr<Integrator> integrator)
     : entry(make_cown<Delay>(columns - 1,
               make_cown<FirFilter>(columns, h,
                 make_cown<SampleFilter>(columns,
                   make_cown<Delay>(columns - 1,
                     make_cown<FirFilter>(columns, f,
-                      make_cown<TaggedForward>(id, integrator))))))) {}
+                      make_cown<TaggedForward>(id, move(integrator)))))))) {}
 
   static void value(const cown_ptr<Bank>& self, uint64_t n) {
     when(self) << [n](acquired_cown<Bank> self)  mutable {
@@ -215,7 +215,7 @@ struct Branch {
   vector<cown_ptr<Bank>> banks;
 
   Branch(uint64_t channels, uint64_t columns, Matrix h, Matrix f, const cown_ptr<Integrator>& integrator):
-    channels(channels), columns(columns), h(h), f(f), integrator(integrator)
+    channels(channels), columns(columns), h(h), f(f), integrator(move(integrator))
   {
     uint64_t index = 0;
     for (uint64_t i = 0; i < channels; ++i) {
@@ -238,7 +238,7 @@ void Source::boot(const cown_ptr<Source>& self) {
   when(self) << [tag = self](acquired_cown<Source> self)  mutable {
     Branch::value(self->branch, self->current);
     self->current = (self->current + 1) % self->max;
-    Producer::next(self->producer, tag);
+    Producer::next(self->producer, move(tag));
   };
 }
 
@@ -560,12 +560,12 @@ struct FilterBank: public AsyncBenchmark {
 
     auto producer = make_cown<Producer>(simulations);
     auto sink = make_cown<Sink>(sinkrate);
-    auto combine = make_cown<Combine>(sink);
-    auto integrator = make_cown<Integrator>(channels, combine);
-    auto branch = make_cown<Branch>(channels, columns, h, f, integrator);
-    auto source = make_cown<Source>(producer, branch);
+    auto combine = make_cown<Combine>(move(sink));
+    auto integrator = make_cown<Integrator>(channels, move(combine));
+    auto branch = make_cown<Branch>(channels, columns, h, f, move(integrator));
+    auto source = make_cown<Source>(producer, move(branch));
 
-    Producer::next(producer, source);
+    Producer::next(producer, move(source));
   }
 
   std::string name() { return "FilterBank"; }

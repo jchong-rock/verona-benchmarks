@@ -18,8 +18,8 @@ struct Worker {
   SimpleRand random;
   uint64_t messages;
 
-  Worker(cown_ptr<Master>& master, uint64_t index, cown_ptr<Dictionary>& dictionary, uint64_t messages, uint64_t percentage):
-    master(master), percentage(percentage), dictionary(dictionary), random(index + messages + percentage), messages(messages) {}
+  Worker(cown_ptr<Master> master, uint64_t index, cown_ptr<Dictionary> dictionary, uint64_t messages, uint64_t percentage):
+    master(move(master)), percentage(percentage), dictionary(move(dictionary)), random(index + messages + percentage), messages(messages) {}
 
   static void work(const cown_ptr<Worker>& self, uint64_t value = 0);
 };
@@ -27,8 +27,8 @@ struct Worker {
 struct Dictionary {
   unordered_map<uint64_t, uint64_t> map;
   Dictionary() {}
-  static void write(const cown_ptr<Dictionary>& self, const cown_ptr<Worker>& worker, uint64_t key, uint64_t value);
-  static void read(const cown_ptr<Dictionary>& self, const cown_ptr<Worker>& worker, uint64_t key);
+  static void write(const cown_ptr<Dictionary>& self, cown_ptr<Worker> worker, uint64_t key, uint64_t value);
+  static void read(const cown_ptr<Dictionary>& self, cown_ptr<Worker> worker, uint64_t key);
 };
 
 struct Master {
@@ -64,9 +64,9 @@ void Worker::work(const cown_ptr<Worker>& self, uint64_t value) {
       value %= (INT64_MAX / 4096);
 
       if (value < self->percentage) {
-        Dictionary::write(self->dictionary, tag, value, value);
+        Dictionary::write(self->dictionary, move(tag), value, value);
       } else {
-        Dictionary::read(self->dictionary, tag, value);
+        Dictionary::read(self->dictionary, move(tag), value);
       }
     } else {
       Master::done(self->master);
@@ -74,15 +74,15 @@ void Worker::work(const cown_ptr<Worker>& self, uint64_t value) {
   };
 }
 
-void Dictionary::write(const cown_ptr<Dictionary>& self, const cown_ptr<Worker>& worker, uint64_t key, uint64_t value) {
-  when(self) << [worker, key, value](acquired_cown<Dictionary> self) mutable {
+void Dictionary::write(const cown_ptr<Dictionary>& self, cown_ptr<Worker> worker, uint64_t key, uint64_t value) {
+  when(self) << [worker=move(worker), key, value](acquired_cown<Dictionary> self) mutable {
     self->map[key] = value;
     Worker::work(worker, value);
   };
 }
 
-void Dictionary::read(const cown_ptr<Dictionary>& self, const cown_ptr<Worker>& worker, uint64_t key) {
-  when(self) << [worker, key](acquired_cown<Dictionary> self)  mutable {
+void Dictionary::read(const cown_ptr<Dictionary>& self, cown_ptr<Worker> worker, uint64_t key) {
+  when(self) << [worker=move(worker), key](acquired_cown<Dictionary> self)  mutable {
     auto it = self->map.find(key);
     Worker::work(worker, it != self->map.end() ? it->second : 0);
   };

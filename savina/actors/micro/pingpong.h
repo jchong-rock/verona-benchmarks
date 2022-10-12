@@ -13,7 +13,7 @@ struct Ping;
 
 struct Pong {
   uint64_t count = 0;
-  static void ping(const cown_ptr<Pong>&, const cown_ptr<Ping>&);
+  static void ping(const cown_ptr<Pong>&, cown_ptr<Ping>);
 };
 
 struct Ping {
@@ -22,14 +22,14 @@ struct Ping {
 
   Ping(uint64_t pings, const cown_ptr<Pong>& pong): left(pings - 1), _pong(pong) {}
 
-  static void make(uint64_t pings, const cown_ptr<Pong>& pong) {
+  static void make(uint64_t pings, cown_ptr<Pong> pong) {
     Pong::ping(pong, make_cown<Ping>(pings, pong));
   }
 
   static void pong(const cown_ptr<Ping>& self) {
     when(self) << [tag=self](acquired_cown<Ping> self)  mutable{
       if(self->left > 0) {
-        Pong::ping(self->_pong, tag);
+        Pong::ping(self->_pong, move(tag));
         self->left--;
       } else {
         /* done */
@@ -38,8 +38,8 @@ struct Ping {
   }
 };
 
-void Pong::ping(const cown_ptr<Pong>& self, const cown_ptr<Ping>& sender) {
-  when(self) << [sender](acquired_cown<Pong> self)  mutable{
+void Pong::ping(const cown_ptr<Pong>& self, cown_ptr<Ping> sender) {
+  when(self) << [sender=move(sender)](acquired_cown<Pong> self)  mutable{
     Ping::pong(sender);
     self->count++;
   };
@@ -58,21 +58,3 @@ struct PingPong: public AsyncBenchmark {
 };
 
 };
-
-// class iso PingPong is AsyncActorBenchmark
-//   let _pings: U64
-
-//   new iso create(pings: U64) =>
-//     _pings = pings
-  
-//   fun box apply(c: AsyncBenchmarkCompletion, last: Bool) =>
-//     Ping(c, _pings, Pong)
-
-//   fun tag name(): String => "Ping Pong"
-
-// actor Pong
-//   var _count: U64 = 0
-
-//   be ping(sender: Ping) =>
-//     sender.pong()
-//     _count = _count + 1

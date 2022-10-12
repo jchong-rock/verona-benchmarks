@@ -25,8 +25,8 @@ struct CustomerFactory {
     number_of_haircuts(number_of_haircuts), attempts(0), room(room) {}
 
   static void run(cown_ptr<CustomerFactory>&&, uint64_t);
-  static void returned(cown_ptr<CustomerFactory>&, cown_ptr<Customer>&);
-  static void left(cown_ptr<CustomerFactory>&, cown_ptr<Customer>&);
+  static void returned(cown_ptr<CustomerFactory>&, cown_ptr<Customer>);
+  static void left(cown_ptr<CustomerFactory>&);
 };
 
 struct Customer {
@@ -45,7 +45,7 @@ struct Barber {
 
   Barber(uint64_t haircut_rate): haircut_rate(haircut_rate) {}
 
-  static void enter(cown_ptr<Barber>&, cown_ptr<Customer>&, cown_ptr<WaitingRoom>&);
+  static void enter(cown_ptr<Barber>&, cown_ptr<Customer>, cown_ptr<WaitingRoom>);
   static void wait(cown_ptr<Barber>&);
 };
 
@@ -57,8 +57,8 @@ struct WaitingRoom {
 
   WaitingRoom(uint64_t size, cown_ptr<Barber>&& barber): size(size), barber_sleeps(true), barber(barber) {}
 
-  static void enter(cown_ptr<WaitingRoom>& self, cown_ptr<Customer>& customer) {
-    when(self) << [customer, tag=self](acquired_cown<WaitingRoom> self) mutable {
+  static void enter(cown_ptr<WaitingRoom>& self, cown_ptr<Customer> customer) {
+    when(self) << [tag=self, customer=move(customer)](acquired_cown<WaitingRoom> self) mutable {
       if (self->customers.size() == self->size) {
         Customer::full(customer);
       } else {
@@ -74,14 +74,10 @@ struct WaitingRoom {
     };
   }
 
-  static void enter(cown_ptr<WaitingRoom>& self, cown_ptr<Customer>&& customer) {
-    WaitingRoom::enter(self, customer);
-  }
-
   static void next(cown_ptr<WaitingRoom>& self) {
     when(self) << [tag=self](acquired_cown<WaitingRoom> self)  mutable {
       if (self->customers.size() > 0) {
-        Barber::enter(self->barber, self->customers.front(), tag);
+        Barber::enter(self->barber, move(self->customers.front()), move(tag));
         self->customers.pop_front();
       } else {
         Barber::wait(self->barber);
@@ -102,8 +98,8 @@ static uint64_t BusyWaiter(uint64_t wait) {
   return x;
 }
 
-void Barber::enter(cown_ptr<Barber>& self, cown_ptr<Customer>& customer, cown_ptr<WaitingRoom>& room) {
-  when(self) << [customer, room](acquired_cown<Barber> self)  mutable {
+void Barber::enter(cown_ptr<Barber>& self, cown_ptr<Customer> customer, cown_ptr<WaitingRoom> room) {
+  when(self) << [customer=move(customer), room=move(room)](acquired_cown<Barber> self)  mutable {
     Customer::sit_down(customer);
     BusyWaiter(Rand(time_point_cast<nanoseconds>(system_clock::now()).time_since_epoch().count()).integer(self->haircut_rate) + 1000);
     Customer::pay_and_leave(customer);
@@ -113,14 +109,14 @@ void Barber::enter(cown_ptr<Barber>& self, cown_ptr<Customer>& customer, cown_pt
 
 void Barber::wait(cown_ptr<Barber>& self) { when(self) << [](acquired_cown<Barber>) mutable {}; }
 
-void CustomerFactory::returned(cown_ptr<CustomerFactory>& self, cown_ptr<Customer>& customer) {
-  when(self) << [customer](acquired_cown<CustomerFactory> self)  mutable {
+void CustomerFactory::returned(cown_ptr<CustomerFactory>& self, cown_ptr<Customer> customer) {
+  when(self) << [customer=move(customer)](acquired_cown<CustomerFactory> self)  mutable {
     self->attempts++;
-    WaitingRoom::enter(self->room, customer);
+    WaitingRoom::enter(self->room, move(customer));
   };
 }
 
-void CustomerFactory::left(cown_ptr<CustomerFactory>& self, cown_ptr<Customer>& customer) {
+void CustomerFactory::left(cown_ptr<CustomerFactory>& self) {
   when(self) << [](acquired_cown<CustomerFactory> self)  mutable {
     self->number_of_haircuts--;
     if (self->number_of_haircuts == 0) {
@@ -145,7 +141,7 @@ void Customer::wait(cown_ptr<Customer>& self) { when(self) << [](acquired_cown<C
 
 void Customer::sit_down(cown_ptr<Customer>& self) { when(self) << [](acquired_cown<Customer>) mutable {}; }
 
-void Customer::pay_and_leave(cown_ptr<Customer>& self) { when(self) << [tag=self](acquired_cown<Customer> self) mutable { CustomerFactory::left(self->factory, tag); }; }
+void Customer::pay_and_leave(cown_ptr<Customer>& self) { when(self) << [](acquired_cown<Customer> self) mutable { CustomerFactory::left(self->factory); }; }
 
 };
 

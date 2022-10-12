@@ -19,7 +19,7 @@ struct Fibonacci {
 
   Fibonacci(): responses(0), result(0) {}
 
-  Fibonacci(const cown_ptr<Fibonacci>& parent): parent(parent), responses(0), result(0) {}
+  Fibonacci(cown_ptr<Fibonacci> parent): parent(move(parent)), responses(0), result(0) {}
 
   static void root(int64_t n) { Fibonacci::compute(make_cown<Fibonacci>(), n); }
 

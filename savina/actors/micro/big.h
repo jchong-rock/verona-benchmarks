@@ -23,8 +23,8 @@ struct BigActor {
     : master(master), index(index), random(index), pings(pings), sent(0) {}
 
   static void set_neighbors(const cown_ptr<BigActor>& self, vector<cown_ptr<BigActor>> n) {
-    when(self) << [n](acquired_cown<BigActor> self) mutable {
-      self->neighbors = n;
+    when(self) << [n=move(n)](acquired_cown<BigActor> self) mutable {
+      self->neighbors = move(n);
     };
   }
 

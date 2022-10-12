@@ -47,8 +47,8 @@ struct Worker {
   SimpleRand random;
   uint64_t messages;
 
-  Worker(cown_ptr<Master>& master, uint64_t messages, uint64_t size, uint64_t write, cown_ptr<SortedList>& list):
-    master(master), size(size), write(write), list(list), random(messages + size + write), messages(messages) {}
+  Worker(cown_ptr<Master> master, uint64_t messages, uint64_t size, uint64_t write, cown_ptr<SortedList> list):
+    master(move(master)), size(size), write(write), list(move(list)), random(messages + size + write), messages(messages) {}
 
   static void work(const cown_ptr<Worker>&, uint64_t value = 0);
 };
@@ -56,21 +56,21 @@ struct Worker {
 struct SortedList {
   SortedLinkedList<uint64_t> data;
 
-  static void write(const cown_ptr<SortedList>& self, const cown_ptr<Worker>& worker, uint64_t value) {
-    when(self) << [worker, value](acquired_cown<SortedList> self)  mutable {
+  static void write(const cown_ptr<SortedList>& self, cown_ptr<Worker> worker, uint64_t value) {
+    when(self) << [worker=move(worker), value](acquired_cown<SortedList> self)  mutable {
       self->data.push(value);
       Worker::work(worker, value);
     };
   }
 
-  static void contains(const cown_ptr<SortedList>& self, const cown_ptr<Worker>& worker, uint64_t value) {
-    when(self) << [worker, value](acquired_cown<SortedList> self)  mutable {
+  static void contains(const cown_ptr<SortedList>& self, cown_ptr<Worker> worker, uint64_t value) {
+    when(self) << [worker=move(worker), value](acquired_cown<SortedList> self)  mutable {
       Worker::work(worker, self->data.contains(value) ? 0 : 1);
     };
   }
 
-  static void size(const cown_ptr<SortedList>& self, const cown_ptr<Worker>& worker) {
-    when(self) << [worker](acquired_cown<SortedList> self)  mutable {
+  static void size(const cown_ptr<SortedList>& self, cown_ptr<Worker> worker) {
+    when(self) << [worker=move(worker)](acquired_cown<SortedList> self)  mutable {
       Worker::work(worker, self->data.size());
     };
   }
@@ -107,11 +107,11 @@ void Worker::work(const cown_ptr<Worker>& self, uint64_t value) {
       uint64_t value2 = self->random.nextInt(100);
 
       if (value2 < self->size) {
-        SortedList::size(self->list, tag);
+        SortedList::size(self->list, move(tag));
       } else if (value2 < (self->size + self->write)) {
-        SortedList::write(self->list, tag, value2);
+        SortedList::write(self->list, move(tag), value2);
       } else {
-        SortedList::contains(self->list, tag, value2);
+        SortedList::contains(self->list, move(tag), value2);
       }
     } else {
       Master::done(self->master);

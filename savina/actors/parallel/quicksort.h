@@ -27,8 +27,8 @@ struct Sorter {
   Sorter(Position position, uint64_t threshold, uint64_t length):
     position(position), threshold(threshold), length(length), fragments(0), results(nullptr) {}
 
-  Sorter(const cown_ptr<Sorter>& parent, Position position, uint64_t threshold, uint64_t length):
-    parent(parent), position(position), threshold(threshold), length(length), fragments(0), results(nullptr) {}
+  Sorter(cown_ptr<Sorter> parent, Position position, uint64_t threshold, uint64_t length):
+    parent(move(parent)), position(position), threshold(threshold), length(length), fragments(0), results(nullptr) {}
 
   tuple<unique_ptr<vector<uint64_t>>, unique_ptr<vector<uint64_t>>, unique_ptr<vector<uint64_t>>> pivotize(unique_ptr<vector<uint64_t>> input, uint64_t pivot) {
     unique_ptr<vector<uint64_t>> l = make_unique<vector<uint64_t>>();
@@ -92,10 +92,10 @@ struct Sorter {
         unique_ptr<vector<uint64_t>> l;
         unique_ptr<vector<uint64_t>> p;
         unique_ptr<vector<uint64_t>> r;
-        tie(l, p, r) = self->pivotize(move(input), pivot);
+        tie(l, p, r) = move(self->pivotize(move(input), pivot));
 
         Sorter::sort(make_cown<Sorter>(tag, Position::Left, self->threshold, self->length), move(l));
-        Sorter::sort(make_cown<Sorter>(tag, Position::Right, self->threshold, self->length), move(r));
+        Sorter::sort(make_cown<Sorter>(move(tag), Position::Right, self->threshold, self->length), move(r));
 
         self->results = move(p);
         self->fragments++;

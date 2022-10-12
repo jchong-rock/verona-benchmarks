@@ -8,6 +8,7 @@ namespace actor_benchmark {
 namespace philosopher {
 
 using namespace verona::cpp;
+using namespace std;
 
 struct Arbitator;
 
@@ -17,7 +18,7 @@ struct Philosopher {
   uint64_t rounds;
   cown_ptr<Arbitator> arbitator;
 
-  Philosopher(size_t id, uint64_t rounds, cown_ptr<Arbitator>& arbitator): id(id), local(0), rounds(rounds), arbitator(arbitator) {}
+  Philosopher(size_t id, uint64_t rounds, cown_ptr<Arbitator> arbitator): id(id), local(0), rounds(rounds), arbitator(move(arbitator)) {}
 
   static void start(const cown_ptr<Philosopher>&);
   static void denied(const cown_ptr<Philosopher>&);
@@ -34,8 +35,8 @@ struct Arbitator {
       forks.push_back(false);
   }
 
-  static void hungry(const cown_ptr<Arbitator>& self, const cown_ptr<Philosopher>& philosopher, uint64_t id) {
-    when(self) << [philosopher, id](acquired_cown<Arbitator> self)  mutable {
+  static void hungry(const cown_ptr<Arbitator>& self, cown_ptr<Philosopher> philosopher, uint64_t id) {
+    when(self) << [philosopher=move(philosopher), id](acquired_cown<Arbitator> self)  mutable {
       uint64_t right_index = ((id + 1) % self->philosophers);
       if (self->forks[id] || self->forks[right_index]) {
         Philosopher::denied(philosopher);
@@ -65,14 +66,14 @@ struct Arbitator {
 
 void Philosopher::start(const cown_ptr<Philosopher>& self) {
   when(self) << [tag=self](acquired_cown<Philosopher> self)  mutable {
-    Arbitator::hungry(self->arbitator, tag, self->id);
+    Arbitator::hungry(self->arbitator, move(tag), self->id);
   };
 }
 
 void Philosopher::denied(const cown_ptr<Philosopher>& self) {
   when(self) << [tag=self](acquired_cown<Philosopher> self)  mutable {
     self->local++;
-    Arbitator::hungry(self->arbitator, tag, self->id);
+    Arbitator::hungry(self->arbitator, move(tag), self->id);
   };
 }
 

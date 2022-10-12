@@ -15,7 +15,7 @@ struct RateComputer {
 
   RateComputer(double rate): rate(rate) {}
 
-  static void compute(const cown_ptr<RateComputer>&, const cown_ptr<SeriesWorker>&, double);
+  static void compute(const cown_ptr<RateComputer>&, cown_ptr<SeriesWorker>, double);
 };
 
 enum class StashedMessage { NextMessage, GetMessage };
@@ -27,18 +27,18 @@ struct SeriesWorker {
   deque<StashedMessage> buffer;
   bool stash_mode;
 
-  SeriesWorker(cown_ptr<LogmapMaster>& master, cown_ptr<RateComputer>&& computer, double term): master(master), computer(computer), term(term), stash_mode(false) {}
+  SeriesWorker(cown_ptr<LogmapMaster>& master, cown_ptr<RateComputer>&& computer, double term): master(master), computer(move(computer)), term(term), stash_mode(false) {}
 
   static void next(const cown_ptr<SeriesWorker>&);
   static void result(const cown_ptr<SeriesWorker>&, double);
   static void get(const cown_ptr<SeriesWorker>&);
 
   void stash(StashedMessage message) { buffer.push_back(message); }
-  bool unstash(const cown_ptr<SeriesWorker>&, double);
+  bool unstash(cown_ptr<SeriesWorker>, double);
 };
 
-void RateComputer::compute(const cown_ptr<RateComputer>& self, const cown_ptr<SeriesWorker>& worker, double term) {
-  when(self) << [worker, term](acquired_cown<RateComputer> self)  mutable {
+void RateComputer::compute(const cown_ptr<RateComputer>& self, cown_ptr<SeriesWorker> worker, double term) {
+  when(self) << [worker=move(worker), term](acquired_cown<RateComputer> self)  mutable {
     SeriesWorker::result(worker, self->rate * term * (1 - term));
   };
 }
@@ -90,7 +90,7 @@ struct LogmapMaster {
   }
 };
 
-bool SeriesWorker::unstash(const cown_ptr<SeriesWorker>& self, double term) {
+bool SeriesWorker::unstash(cown_ptr<SeriesWorker> self, double term) {
   while (!buffer.empty())
   {
     StashedMessage message = buffer.front();
@@ -98,7 +98,7 @@ bool SeriesWorker::unstash(const cown_ptr<SeriesWorker>& self, double term) {
     switch (message)
     {
     case StashedMessage::NextMessage:
-      RateComputer::compute(computer, self, term);
+      RateComputer::compute(computer, move(self), term);
       return true;
 
     case StashedMessage::GetMessage:
@@ -121,7 +121,7 @@ void SeriesWorker::next(const cown_ptr<SeriesWorker>& self) {
     if (self->stash_mode) {
       self->stash(StashedMessage::NextMessage);
     } else {
-      RateComputer::compute(self->computer, tag, self->term);
+      RateComputer::compute(self->computer, move(tag), self->term);
       self->stash_mode = true;
     }
   };
@@ -131,7 +131,7 @@ void SeriesWorker::result(const cown_ptr<SeriesWorker>& self, double term) {
   when(self) << [tag=self, term](acquired_cown<SeriesWorker> self)  mutable {
     self->term = term;
     if (self->stash_mode) {
-      self->stash_mode = self->unstash(tag, term);
+      self->stash_mode = self->unstash(move(tag), term);
     }
   };
 }

@@ -113,6 +113,7 @@ cown_ptr<Master> Master::make(uint64_t workers, uint64_t data_length, uint64_t t
 }
 
 void Master::send_work(uint64_t priority, uint64_t srA, uint64_t scA, uint64_t srB, uint64_t scB, uint64_t srC, uint64_t scC, uint64_t length, uint64_t dimension) {
+  assert(workers.size() != 0);
   Worker::work(workers[(srC + scC) % workers.size()], priority, srA, scA, srB, scB, srC, scC, length, dimension);
   sent++;
 }
@@ -126,8 +127,8 @@ void Master::work(const cown_ptr<Master>& self, uint64_t priority, uint64_t srA,
 void Master::done(const cown_ptr<Master>& self) {
   when(self) << [](acquired_cown<Master> self)  mutable{
     if (--self->num_workers == 0) {
-      self->workers.clear();
-      self->collector = nullptr;
+      // self->workers.clear();
+      // self->collector = nullptr;
       /* done */
     }
   };
