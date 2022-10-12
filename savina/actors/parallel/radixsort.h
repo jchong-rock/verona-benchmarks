@@ -20,12 +20,6 @@ using namespace std;
 struct Sorter;
 struct Validation;
 
-#define use_variant
-
-#ifdef use_variant
-using Neighbor = variant<cown_ptr<Validation>, cown_ptr<Sorter>>;
-#endif
-
 struct Validation {
   uint64_t size;
   double sum;
@@ -55,94 +49,6 @@ struct Validation {
   }
 };
 
-#ifdef use_variant
-struct Sorter {
-  Neighbor next;
-  uint64_t size;
-  uint64_t radix;
-  vector<uint64_t> data;
-  uint64_t received;
-  uint64_t current;
-
-  Sorter(uint64_t size, uint64_t radix, Neighbor next):
-    next(next), size(size), radix(radix), data(size, 0), received(0), current(0) {}
-
-  // The pipeline seems intrinsic to the order
-
-  static void value(const cown_ptr<Sorter>& self, uint64_t n) {
-    when(self) << [n](acquired_cown<Sorter> self) mutable {
-      self->received++;
-
-      if ((n & self->radix) == 0) {
-        visit(overloaded {
-          [&](const cown_ptr<Validation>& next) { Validation::value(next, n); },
-          [&](const cown_ptr<Sorter>& next) { Sorter::value(next, n); },
-        }, self->next);
-      } else {
-        self->data[self->current++] = n;
-      }
-
-      if (self->received == self->size) {
-        visit(overloaded {
-          [&](const cown_ptr<Validation>& next) {
-            for(uint64_t i = 0 ; i < self->current; ++i)
-              Validation::value(next, self->data[i]);
-          },
-          [&](const cown_ptr<Sorter>& next) {
-            for(uint64_t i = 0 ; i < self->current; ++i)
-              Sorter::value(next, self->data[i]);
-          },
-        }, self->next);
-      }
-
-    };
-  }
-};
-
-namespace Source {
-  void create(uint64_t size, uint64_t max, uint64_t seed, Neighbor next) {
-    auto random = SimpleRand(seed);
-
-    visit(overloaded {
-      [&](const cown_ptr<Validation>& next) {
-        for (uint64_t i = 0; i < size; ++i)
-          Validation::value(next, random.nextLong() % max);
-      },
-      [&](const cown_ptr<Sorter>& next) {
-        for (uint64_t i = 0; i < size; ++i)
-          Sorter::value(next, random.nextLong() % max);
-      },
-    }, next);
-  }
-};
-
-};
-
-struct Radixsort: public AsyncBenchmark {
-  uint64_t dataset;
-  uint64_t max;
-  uint64_t seed;
-
-  Radixsort(uint64_t dataset, uint64_t max, uint64_t seed):
-    dataset(dataset), max(max), seed(seed) {}
-
-  void run() {
-    using namespace radixsort;
-
-    uint64_t radix = max / 2;
-    Neighbor next = make_cown<Validation>(dataset);
-
-    while (radix > 0) {
-      next = make_cown<Sorter>(dataset, radix, next);
-      radix /= 2;
-    }
-
-    Source::create(dataset, max, seed, next);
-  }
-
-  std::string name() { return "Radixsort"; }
-};
-#else
 struct Sorter {
   cown_ptr<Validation> validation;
   cown_ptr<Sorter> sorter;
@@ -152,11 +58,11 @@ struct Sorter {
   uint64_t received;
   uint64_t current;
 
-  Sorter(uint64_t size, uint64_t radix, const cown_ptr<Validation>& next):
-    validation(next), size(size), radix(radix), data(size, 0), received(0), current(0) {}
+  Sorter(uint64_t size, uint64_t radix, cown_ptr<Validation> next):
+    validation(move(next)), size(size), radix(radix), data(size, 0), received(0), current(0) {}
 
-  Sorter(uint64_t size, uint64_t radix, const cown_ptr<Sorter>& next):
-    sorter(next), size(size), radix(radix), data(size, 0), received(0), current(0) {}
+  Sorter(uint64_t size, uint64_t radix, cown_ptr<Sorter> next):
+    sorter(move(next)), size(size), radix(radix), data(size, 0), received(0), current(0) {}
 
   // The pipeline seems intrinsic to the order
 
@@ -218,10 +124,10 @@ struct Radixsort: public AsyncBenchmark {
     cown_ptr<Validation> v = make_cown<Validation>(dataset);
 
     if (radix > 0) {
-      cown_ptr<Sorter> next = make_cown<Sorter>(dataset, radix, v);
+      cown_ptr<Sorter> next = make_cown<Sorter>(dataset, radix, move(v));
       radix /= 2;
       while (radix > 0) {
-        next = make_cown<Sorter>(dataset, radix, next);
+        next = make_cown<Sorter>(dataset, radix, move(next));
         radix /= 2;
       }
 
@@ -233,6 +139,5 @@ struct Radixsort: public AsyncBenchmark {
 
   std::string name() { return "Radixsort"; }
 };
-#endif
 
 };

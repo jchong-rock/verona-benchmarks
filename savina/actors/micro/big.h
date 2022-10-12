@@ -54,7 +54,7 @@ struct BigMaster {
   static void make(uint64_t pings, uint64_t actors) {
     cown_ptr<BigMaster> master = make_cown<BigMaster>(actors);
 
-    when(master) << [tag=master, pings, actors](acquired_cown<BigMaster> master) {
+    when(master) << [tag=move(master), pings, actors](acquired_cown<BigMaster> master) {
       for (uint64_t i = 0; i < actors; ++i)
         master->n.emplace_back(make_cown<BigActor>(tag, i, pings));
 

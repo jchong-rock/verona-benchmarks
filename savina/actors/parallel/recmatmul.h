@@ -69,8 +69,8 @@ struct Worker {
   uint64_t threshold;
   bool did_work;
 
-  Worker(const cown_ptr<Master>& master, const cown_ptr<Collector>& collector, vector<vector<uint64_t>> matrix_a, vector<vector<uint64_t>> matrix_b, uint64_t threshold)
-    :master(master), collector(collector), matrix_a(matrix_a), matrix_b(matrix_b), threshold(threshold), did_work(false) {}
+  Worker(cown_ptr<Master> master, cown_ptr<Collector> collector, vector<vector<uint64_t>> matrix_a, vector<vector<uint64_t>> matrix_b, uint64_t threshold)
+    :master(move(master)), collector(move(collector)), matrix_a(matrix_a), matrix_b(matrix_b), threshold(threshold), did_work(false) {}
 
   static void work(const cown_ptr<Worker>& self, uint64_t priority, uint64_t srA, uint64_t scA, uint64_t srB, uint64_t scB, uint64_t srC, uint64_t scC, uint64_t length, uint64_t dimension);
 };
@@ -127,8 +127,8 @@ void Master::work(const cown_ptr<Master>& self, uint64_t priority, uint64_t srA,
 void Master::done(const cown_ptr<Master>& self) {
   when(self) << [](acquired_cown<Master> self)  mutable{
     if (--self->num_workers == 0) {
-      // self->workers.clear();
-      // self->collector = nullptr;
+      self->workers.clear();
+      self->collector = nullptr;
       /* done */
     }
   };
