@@ -3,7 +3,6 @@
 #include <util/random.h>
 #include <cmath>
 #include <unordered_map>
-#include <variant>
 #include <tuple>
 
 namespace actor_benchmark {
