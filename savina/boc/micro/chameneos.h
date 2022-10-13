@@ -93,7 +93,8 @@ struct Mall {
 };
 
 void Chameneo::make(cown_ptr<Mall> mall, ChameneoColor color) {
-  Mall::meet(move(mall), make_cown<Chameneo>(mall, color));
+  auto c = make_cown<Chameneo>(mall, color);
+  Mall::meet(move(mall), c);
 }
 
 };
