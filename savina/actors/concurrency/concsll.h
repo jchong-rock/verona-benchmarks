@@ -40,14 +40,14 @@ struct Master;
 struct SortedList;
 
 struct Worker {
-  cown_ptr<Master> master;
+  const cown_ptr<Master> master;
   uint64_t size;
   uint64_t write;
-  cown_ptr<SortedList> list;
+  const cown_ptr<SortedList> list;
   SimpleRand random;
   uint64_t messages;
 
-  Worker(cown_ptr<Master> master, uint64_t messages, uint64_t size, uint64_t write, cown_ptr<SortedList> list):
+  Worker(const cown_ptr<Master> master, uint64_t messages, uint64_t size, uint64_t write, const cown_ptr<SortedList> list):
     master(move(master)), size(size), write(write), list(move(list)), random(messages + size + write), messages(messages) {}
 
   static void work(const cown_ptr<Worker>&, uint64_t value = 0);
@@ -56,20 +56,20 @@ struct Worker {
 struct SortedList {
   SortedLinkedList<uint64_t> data;
 
-  static void write(const cown_ptr<SortedList>& self, cown_ptr<Worker> worker, uint64_t value) {
+  static void write(const cown_ptr<SortedList>& self, const cown_ptr<Worker> worker, uint64_t value) {
     when(self) << [worker=move(worker), value](acquired_cown<SortedList> self)  mutable {
       self->data.push(value);
       Worker::work(worker, value);
     };
   }
 
-  static void contains(const cown_ptr<SortedList>& self, cown_ptr<Worker> worker, uint64_t value) {
+  static void contains(const cown_ptr<SortedList>& self, const cown_ptr<Worker> worker, uint64_t value) {
     when(self) << [worker=move(worker), value](acquired_cown<SortedList> self)  mutable {
       Worker::work(worker, self->data.contains(value) ? 0 : 1);
     };
   }
 
-  static void size(const cown_ptr<SortedList>& self, cown_ptr<Worker> worker) {
+  static void size(const cown_ptr<SortedList>& self, const cown_ptr<Worker> worker) {
     when(self) << [worker=move(worker)](acquired_cown<SortedList> self)  mutable {
       Worker::work(worker, self->data.size());
     };
@@ -78,18 +78,21 @@ struct SortedList {
 
 struct Master {
   uint64_t workers;
-  cown_ptr<SortedList> list;
+  const cown_ptr<SortedList> list;
 
-  Master(uint64_t workers, cown_ptr<SortedList>& list): workers(workers), list(list) {}
+  Master(uint64_t workers, const cown_ptr<SortedList> list): workers(workers), list(move(list)) {}
 
   static void make(uint64_t workers, uint64_t messages, uint64_t size, uint64_t write) {
-    cown_ptr<SortedList> list = make_cown<SortedList>();
+    const cown_ptr<SortedList> list = make_cown<SortedList>();
 
-    cown_ptr<Master> master = make_cown<Master>(workers, list);
+    const cown_ptr<Master> master = make_cown<Master>(workers, list);
 
-    for (uint64_t i = 0; i < workers; ++i) {
+    for (uint64_t i = 0; i < workers - 1; ++i) {
       Worker::work(make_cown<Worker>(master, messages, size, write, list));
     }
+
+    // assume workers is > 0
+    Worker::work(make_cown<Worker>(move(master), messages, size, write, move(list)));
   }
 
   static void done(const cown_ptr<Master>& self) {
