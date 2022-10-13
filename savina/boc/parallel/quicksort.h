@@ -51,9 +51,6 @@ namespace Sorter {
     return sorted;
   }
 
-// #define _quicksort_alternative
-
-#ifndef _quicksort_alternative
   // this is doing a lot of the work in one thread and only deferring to do the final sorts and the concat.
   // but it still seems to be the faster version
   cown_ptr<vector<uint64_t>> sort(vector<uint64_t> input, const uint64_t threshold) {
@@ -71,7 +68,7 @@ namespace Sorter {
       vector<uint64_t> l;
       vector<uint64_t> p;
       vector<uint64_t> r;
-      tie(l, p, r) = pivotize(move(input), pivot);
+      tie(l, p, r) = move(pivotize(move(input), pivot));
 
       auto left = Sorter::sort(move(l), threshold);
       auto right = Sorter::sort(move(r), threshold);
@@ -83,42 +80,6 @@ namespace Sorter {
       return left;
     }
   }
-#else
-  void sort(vector<uint64_t> input, uint64_t threshold, function<void(vector<uint64_t>)> callback) {
-    uint64_t size = input.size();
-
-    if (size < threshold){
-      when() << [input=move(input), callback]() {
-        callback(sort_sequentially(move(input)));
-      };
-    } else {
-      uint64_t pivot = input[size / 2];
-
-      vector<uint64_t> l;
-      vector<uint64_t> p;
-      vector<uint64_t> r;
-      tie(l, p, r) = pivotize(move(input), pivot);
-
-      auto result = make_cown<vector<uint64_t>>(p);
-
-      Sorter::sort(move(l), threshold, [result, size, callback](vector<uint64_t> l){
-        when(result) << [l=move(l), size, callback](acquired_cown<vector<uint64_t>> result){
-          result->insert(result->begin(), l.begin(), l.end());
-          if (result->size() == size)
-            callback(result);
-        };
-      });
-
-      Sorter::sort(move(r), threshold, [result, size, callback](vector<uint64_t> r){
-        when(result) << [r=move(r), size, callback](acquired_cown<vector<uint64_t>> result){
-          result->insert(result->end(), r.begin(), r.end());
-          if (result->size() == size)
-            callback(result);
-        };
-      });
-    }
-  }
-#endif
 };
 
 };
@@ -144,19 +105,11 @@ struct Quicksort: public AsyncBenchmark {
     }
 
     using namespace quicksort;
-#ifndef _quicksort_alternative
-    cown_ptr<vector<uint64_t>> result = Sorter::sort(move(data), threshold);
+    cown_ptr<vector<uint64_t>> result = move(Sorter::sort(move(data), threshold));
     // when(result) << [dataset = dataset](acquired_cown<vector<uint64_t>> result) {
     //   assert(result->size() == dataset);
     //   assert(is_sorted(result->begin(), result->end()));
     // };
-#else
-    Sorter::sort(move(data), threshold, [=](vector<uint64_t> result) {
-      /* done */
-      assert(result.size() == dataset);
-      assert(is_sorted(result.begin(), result.end()));
-    });
-#endif
   }
 
   std::string name() { return "Quicksort"; }

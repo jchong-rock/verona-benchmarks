@@ -35,7 +35,7 @@ struct ForkJoinMaster {
       fjs.push_back(ForkJoin::make(Token{}));
     }
 
-    for (auto& worker: fjs) {
+    for (const auto& worker: fjs) {
       when(master, worker) << [](acquired_cown<ForkJoinMaster> master, acquired_cown<ForkJoin> worker) {
         master->workers--;
       };

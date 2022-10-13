@@ -30,20 +30,19 @@ struct Fork {
 
 struct Philosopher {
   size_t id;
-  // uint64_t local; - we don't need local as we cannot be denied to try again
   uint64_t rounds;
   cown_ptr<Fork> left;
   cown_ptr<Fork> right;
   cown_ptr<Table> table;
 
   Philosopher(size_t id, uint64_t rounds, cown_ptr<Fork> left, cown_ptr<Fork> right, cown_ptr<Table> table):
-    id(id), rounds(rounds), left(left), right(right), table(table) {}
+    id(id), rounds(rounds), left(move(left)), right(move(right)), table(move(table)) {}
 
   static void eat(cown_ptr<Philosopher> phil) {
-    when(phil) << [tag=phil] (acquired_cown<Philosopher> phil) { // sneakily makes things faster by breaking order?
+    when(phil) << [] (acquired_cown<Philosopher> phil) {
       if (--phil->rounds >= 1) {
-        when(phil->left, phil->right) << [](acquired_cown<Fork> left, acquired_cown<Fork> right) {}; // should phil be here?
-        eat(tag);
+        when(phil->left, phil->right) << [](acquired_cown<Fork> left, acquired_cown<Fork> right) {};
+        eat(phil.cown());
       } else {
         Table::finished(phil->table);
       }
@@ -64,21 +63,15 @@ struct DiningPhilosophers: public AsyncBenchmark {
     using namespace philosopher;
 
     cown_ptr<Table> table = make_cown<Table>(philosophers);
-    std::vector<cown_ptr<Philosopher>> phils; // should we be allow to make actors iso?
 
     cown_ptr<Fork> first = make_cown<Fork>();
     cown_ptr<Fork> prev = first;
     for (uint64_t i = 0; i < philosophers - 1; ++i) {
       cown_ptr<Fork> next = make_cown<Fork>();
-      phils.emplace_back(make_cown<Philosopher>(i, rounds, prev, next, table));
-      prev = next;
+      Philosopher::eat(make_cown<Philosopher>(i, rounds, move(prev), next, table));
+      prev = move(next);
     }
-    phils.emplace_back(make_cown<Philosopher>(philosophers - 1, rounds, prev, first, table));
-
-    while(!phils.empty()) {
-      Philosopher::eat(phils.back());
-      phils.pop_back();
-    }
+    Philosopher::eat(make_cown<Philosopher>(philosophers - 1, rounds, move(prev), move(first), move(table)));
   }
 
   std::string name() { return "Dining Philosophers"; }

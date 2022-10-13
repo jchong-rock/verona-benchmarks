@@ -36,12 +36,12 @@ struct FjthrMaster {
     }
 
     for (uint64_t j = 0; j < messages; ++j) {
-      for(cown_ptr<Throughput> k: throughputs) {
+      for(const cown_ptr<Throughput>& k: throughputs) {
         Throughput::compute(k);
       }
     }
 
-    for(cown_ptr<Throughput> k: throughputs) {
+    for(const cown_ptr<Throughput>& k: throughputs) {
       when(master, k) << [](acquired_cown<FjthrMaster> master, acquired_cown<Throughput> k){
         if (--master->total) { /* done */ }
       };

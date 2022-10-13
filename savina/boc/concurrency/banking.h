@@ -5,6 +5,8 @@ namespace boc_benchmark {
 
 namespace banking {
 
+using namespace std;
+
 /*
  * The original bank required stashing and agreement for 2PC between banks
  * With BoC we can drop most of the messages for the accounts, credit, debit, reply

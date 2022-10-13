@@ -24,7 +24,7 @@ namespace Master {
     std::vector<cown_ptr<double>> partial_results;
     for (uint64_t i = 0; i < workers; ++i) {
       left += (range * i);
-      partial_results.push_back(Worker::create(left, left + range, precision));
+      partial_results.emplace_back(Worker::create(left, left + range, precision));
     }
 
 #if true
@@ -52,16 +52,6 @@ namespace Master {
 #endif
     return partial_results[0];
   }
-
-  // static void result(cown_ptr<Master> self, double area) {
-  //   when(self) << [area](acquired_cown<Master> self) {
-  //     self->result_area += area;
-
-  //     if (--self->workers == 0) {
-  //       /* done */
-  //     }
-  //   };
-  // }
 };
 
 namespace Fx {

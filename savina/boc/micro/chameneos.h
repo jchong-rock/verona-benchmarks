@@ -60,27 +60,27 @@ struct Mall {
 
   // No longer need to thread the color through the meeting calls (which in my opinion was an optimisation of the rendezvous in the original benchmark)
   static void meet(cown_ptr<Mall> mall, cown_ptr<Chameneo> approaching) {
-    when(mall) << [tag=mall, approaching](acquired_cown<Mall> mall) {
+    when(mall) << [approaching=move(approaching)](acquired_cown<Mall> mall) {
       if (mall->meeting_count > 0) {
         if (mall->waiting) {
-          when(mall->waiting, approaching) << [a_tag=mall->waiting, b_tag=approaching](acquired_cown<Chameneo> a, acquired_cown<Chameneo> b) {
+          when(mall->waiting, approaching) << [](acquired_cown<Chameneo> a, acquired_cown<Chameneo> b) {
             a->color = b->color = Color::complement(a->color, b->color);
 
             a->meeting_count++;
-            Mall::meet(a->mall, a_tag);
+            Mall::meet(a->mall, a.cown());
 
             b->meeting_count++;
-            Mall::meet(b->mall, b_tag);
+            Mall::meet(b->mall, b.cown());
           };
 
           mall->meeting_count--;
           mall->waiting = nullptr;
         } else {
-          mall->waiting = approaching;
+          mall->waiting = move(approaching);
         }
       } else {
 
-        when(tag, approaching) << [](acquired_cown<Mall> mall, acquired_cown<Chameneo> approaching) {
+        when(mall.cown(), approaching) << [](acquired_cown<Mall> mall, acquired_cown<Chameneo> approaching) {
           approaching->color = ChameneoColor::Faded;
           mall->sum += approaching->meeting_count;
           if (++mall->faded == mall->chameneos) {
@@ -93,7 +93,7 @@ struct Mall {
 };
 
 void Chameneo::make(cown_ptr<Mall> mall, ChameneoColor color) {
-  Mall::meet(mall, make_cown<Chameneo>(mall, color));
+  Mall::meet(move(mall), make_cown<Chameneo>(mall, color));
 }
 
 };

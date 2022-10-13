@@ -21,7 +21,7 @@ struct SeriesWorker {
   SeriesWorker(double term): term(term) {}
 
   static void next(const cown_ptr<SeriesWorker>& worker, const cown_ptr<RateComputer>& computer) {
-    when(worker, computer) << [] (acquired_cown<SeriesWorker> worker, acquired_cown<RateComputer> computer) mutable{
+    when(worker, computer) << [] (acquired_cown<SeriesWorker> worker, acquired_cown<RateComputer> computer) mutable {
       worker->term = computer->compute(worker->term);
     };
   }
@@ -43,8 +43,8 @@ namespace LogmapMaster {
         SeriesWorker::next(workers[j], computers[j]);
 
     cown_ptr<double> sum = make_cown<double>(0);
-    for(uint64_t k = 0; k < workers.size(); ++k) {
-      when(sum, workers[k]) << [](acquired_cown<double> sum, acquired_cown<SeriesWorker> worker)  mutable{
+    for(const auto& worker: workers) {
+      when(sum, worker) << [](acquired_cown<double> sum, acquired_cown<SeriesWorker> worker) mutable {
         sum += worker->term;
       };
     }

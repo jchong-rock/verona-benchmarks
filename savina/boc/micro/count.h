@@ -20,11 +20,11 @@ struct Producer {
   Producer(uint64_t messages): messages(messages) { }
 
   static void make(cown_ptr<Counter> counter, uint64_t messages) {
-    cown_ptr<Producer> producer = make_cown<Producer>(messages);
     for (uint64_t i = 0; i < messages; ++i) {
       when(counter) << [](acquired_cown<Counter> counter) { counter->count++; };
     }
 
+    cown_ptr<Producer> producer = make_cown<Producer>(messages);
     when(counter, producer) << [](acquired_cown<Counter> counter, acquired_cown<Producer> producer) {
       /* done */
     };
