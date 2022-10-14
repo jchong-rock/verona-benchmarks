@@ -79,7 +79,7 @@ struct Cigsmok: public AsyncBenchmark {
   void run() {
     cown_ptr<cigsmok::Arbiter> arbiter = make_cown<cigsmok::Arbiter>(rounds);
     cigsmok::Arbiter::add_smokers(arbiter, smokers);
-    cigsmok::Arbiter::notify_smoker(arbiter);
+    cigsmok::Arbiter::notify_smoker(std::move(arbiter));
   }
 
   std::string name() { return "Cigarette Smokers"; }

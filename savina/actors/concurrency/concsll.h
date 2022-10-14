@@ -105,16 +105,16 @@ struct Master {
 };
 
 void Worker::work(const cown_ptr<Worker>& self, uint64_t value) {
-  when(self) << [tag=self, value](acquired_cown<Worker> self)  mutable {
+  when(self) << [value](acquired_cown<Worker> self)  mutable {
     if (--self->messages > 0) {
       uint64_t value2 = self->random.nextInt(100);
 
       if (value2 < self->size) {
-        SortedList::size(self->list, move(tag));
+        SortedList::size(self->list, self.cown());
       } else if (value2 < (self->size + self->write)) {
-        SortedList::write(self->list, move(tag), value2);
+        SortedList::write(self->list, self.cown(), value2);
       } else {
-        SortedList::contains(self->list, move(tag), value2);
+        SortedList::contains(self->list, self.cown(), value2);
       }
     } else {
       Master::done(self->master);
