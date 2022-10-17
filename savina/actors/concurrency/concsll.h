@@ -13,18 +13,15 @@ struct SortedLinkedList {
   list<T> data;
 
   void push(T value) {
-    if (data.empty()) {
-      data.push_back(value);
-    } else {
-      auto it = data.begin();
-      while (it != data.end()) {
-        if (*it <= value) {
-          data.insert(it, value);
-          return;
-        }
-        it++;
+    auto it = data.begin();
+    while (it != data.end()) {
+      if (value <= *it) {
+        data.insert(it, value);
+        return;
       }
+      ++it;
     }
+    data.insert(it, value);
   }
 
   bool contains(T value) {
