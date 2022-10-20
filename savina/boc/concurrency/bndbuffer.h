@@ -3,7 +3,7 @@
 // use "../../util"
 
 #include <memory>
-#include <test/harness.h>
+#include <debug/harness.h>
 #include <cpp/when.h>
 #include "util/bench.h"
 #include <random>

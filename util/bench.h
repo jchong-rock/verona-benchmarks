@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cpp/when.h>
-#include <test/harness.h>
+#include <debug/harness.h>
 #include <float.h>
 #include "stats.h"
 
