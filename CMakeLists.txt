@@ -1,10 +1,17 @@
-cmake_minimum_required(VERSION 3.10.0)
+cmake_minimum_required(VERSION 3.18.0)
 
 project(verona-savina CXX)
 
-set(VERONA_RT_ONLY_HEADER_LIBRARY ON)
+include(FetchContent)
 
-add_subdirectory(verona/src/rt)
+FetchContent_Declare(
+  verona
+  GIT_REPOSITORY https://github.com/microsoft/verona-rt
+  GIT_TAG        aa1cab8c9c7cbc1e55e11d0464c0ea38ff9fe6d1
+  SOURCE_SUBDIR  src
+)
+
+FetchContent_MakeAvailable(verona)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
