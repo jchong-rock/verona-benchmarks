@@ -3,7 +3,11 @@ set(SAVINA ${CMAKE_CURRENT_SOURCE_DIR})
 unset(SRC)
 aux_source_directory(${SAVINA} SRC)
 add_executable(savina ${SRC})
-target_link_libraries(savina verona_rt)
+
+# Enable snmalloc as the default allocator for libc
+set(SNMALLOC_STATIC_LIBRARY ON)
+set(SNMALLOC_STATIC_LIBRARY_PREFIX "")
+target_link_libraries(savina verona_rt snmallocshim-static)
 
 target_compile_options(verona_rt INTERFACE -g -fno-omit-frame-pointer)
 
