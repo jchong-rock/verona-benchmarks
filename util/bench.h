@@ -105,7 +105,10 @@ struct BenchmarkHarness {
     }
 #endif
 
-    detect_leaks = !opt.has("--allow_leaks");
+    // snmalloc is the default allocator, and libc has some things it doesn't
+    // deallocate.
+    detect_leaks = false;
+//    detect_leaks = !opt.has("--allow_leaks");
     Scheduler::set_detect_leaks(detect_leaks);
 
     writer = opt.has("--csv") ? std::unique_ptr<Writer>{std::make_unique<CSVWriter>()} : std::make_unique<ConsoleWriter>();
