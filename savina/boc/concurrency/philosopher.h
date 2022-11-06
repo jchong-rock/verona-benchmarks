@@ -53,7 +53,7 @@ struct Philosopher {
 };
 
 // Even though this is the naive way - i'm still seeing speed up
-struct DiningPhilosophers: public AsyncBenchmark {
+struct DiningPhilosophers: public BocBenchmark {
   uint64_t philosophers;
   uint64_t rounds;
 

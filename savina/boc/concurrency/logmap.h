@@ -56,7 +56,7 @@ namespace LogmapMaster {
 
 };
 
-struct Logmap: public AsyncBenchmark {
+struct Logmap: public BocBenchmark {
   uint64_t terms;
   uint64_t series;
   double rate;

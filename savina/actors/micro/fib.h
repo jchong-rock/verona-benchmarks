@@ -58,7 +58,7 @@ struct Fibonacci {
 
 };
 
-struct Fib: public AsyncBenchmark {
+struct Fib: public ActorBenchmark {
   uint64_t index;
 
   Fib(uint64_t index): index(index) {}

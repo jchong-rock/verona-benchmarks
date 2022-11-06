@@ -122,7 +122,7 @@ void Worker::work(const cown_ptr<Worker>& self, uint64_t value) {
 };
 
 
-struct Concsll: public AsyncBenchmark {
+struct Concsll: public ActorBenchmark {
   uint64_t workers;
   uint64_t messages;
   uint64_t size;

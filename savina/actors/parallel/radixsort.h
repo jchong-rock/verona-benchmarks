@@ -108,7 +108,7 @@ namespace Source {
 
 };
 
-struct Radixsort: public AsyncBenchmark {
+struct Radixsort: public ActorBenchmark {
   uint64_t dataset;
   uint64_t max;
   uint64_t seed;

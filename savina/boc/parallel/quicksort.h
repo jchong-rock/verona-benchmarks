@@ -84,7 +84,7 @@ namespace Sorter {
 
 };
 
-struct Quicksort: public AsyncBenchmark {
+struct Quicksort: public BocBenchmark {
   uint64_t dataset;
   uint64_t max;
   uint64_t threshold;

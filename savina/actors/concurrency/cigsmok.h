@@ -70,7 +70,7 @@ void Smoker::smoke(const cown_ptr<Smoker>& self, uint64_t period) {
 
 };
 
-struct Cigsmok: public AsyncBenchmark {
+struct Cigsmok: public ActorBenchmark {
   uint64_t rounds;
   uint64_t smokers;
 

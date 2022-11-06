@@ -273,7 +273,7 @@ void FirFilter::value(const cown_ptr<FirFilter>& self, uint64_t n) {
 }
 };
 
-struct FilterBank: public AsyncBenchmark {
+struct FilterBank: public ActorBenchmark {
   const uint64_t simulations;
   const uint64_t columns;
   const uint64_t sinkrate;
@@ -308,7 +308,7 @@ struct FilterBank: public AsyncBenchmark {
     Producer::next(producer, move(source));
   }
 
-  std::string name() { return "FilterBank"; }
+  std::string name() { return "Filterbank"; }
 };
 
 };

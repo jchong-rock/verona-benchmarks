@@ -99,7 +99,7 @@ void Chameneo::make(cown_ptr<Mall> mall, ChameneoColor color) {
 
 };
 
-struct Chameneos: public AsyncBenchmark {
+struct Chameneos: public BocBenchmark {
   uint64_t meetings;
   uint64_t chameneos;
 

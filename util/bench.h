@@ -13,7 +13,16 @@ template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 struct AsyncBenchmark {
   virtual void run()=0;
   virtual std::string name()=0;
+  virtual std::string paradigm()=0;
   virtual ~AsyncBenchmark() {}
+};
+
+struct BocBenchmark: public AsyncBenchmark {
+  std::string paradigm() { return "boc"; }
+};
+
+struct ActorBenchmark: public AsyncBenchmark {
+  std::string paradigm() { return "actor"; }
 };
 
 struct Writer {

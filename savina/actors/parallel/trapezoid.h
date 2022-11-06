@@ -79,7 +79,7 @@ void Worker::create(cown_ptr<Master> master, double left, double right, double p
 
 };
 
-struct Trapezoid: public AsyncBenchmark {
+struct Trapezoid: public ActorBenchmark {
   uint64_t pieces;
   uint64_t workers;
   uint64_t left;

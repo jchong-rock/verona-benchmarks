@@ -243,7 +243,7 @@ void Customer::wait() { }
 
 };
 
-struct SleepingBarber: public AsyncBenchmark {
+struct SleepingBarber: public BocBenchmark {
   uint64_t haircuts;
   uint64_t room;
   uint64_t production;

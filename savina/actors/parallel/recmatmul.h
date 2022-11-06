@@ -181,7 +181,7 @@ void Worker::work(const cown_ptr<Worker>& self, uint64_t priority, uint64_t srA,
 
 };
 
-struct Recmatmul: public AsyncBenchmark {
+struct Recmatmul: public ActorBenchmark {
   uint64_t workers;
   uint64_t length;
   uint64_t threshold;

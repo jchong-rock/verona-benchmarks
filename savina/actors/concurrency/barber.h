@@ -145,7 +145,7 @@ void Customer::pay_and_leave(cown_ptr<Customer>& self) { when(self) << [](acquir
 
 };
 
-struct SleepingBarber: public AsyncBenchmark {
+struct SleepingBarber: public ActorBenchmark {
   uint64_t haircuts;
   uint64_t room;
   uint64_t production;

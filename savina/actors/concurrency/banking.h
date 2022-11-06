@@ -128,7 +128,7 @@ void Account::reply(cown_ptr<Account> self, cown_ptr<Teller> teller) {
 
 };
 
-struct Banking: public AsyncBenchmark {
+struct Banking: public ActorBenchmark {
   uint64_t accounts;
   uint64_t transactions;
   double initial;

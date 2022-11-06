@@ -120,7 +120,7 @@ void Chameneo::report(const cown_ptr<Chameneo>& self) {
 
 };
 
-struct Chameneos: public AsyncBenchmark {
+struct Chameneos: public ActorBenchmark {
   uint64_t meetings;
   uint64_t chameneos;
 

@@ -45,7 +45,7 @@ struct ForkJoinMaster {
 
 };
 
-struct Fjcreate: public AsyncBenchmark {
+struct Fjcreate: public BocBenchmark {
   uint64_t workers;
 
   Fjcreate(uint64_t workers): workers(workers) {}

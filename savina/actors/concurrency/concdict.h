@@ -90,7 +90,7 @@ void Dictionary::read(const cown_ptr<Dictionary>& self, cown_ptr<Worker> worker,
 
 };
 
-struct Concdict: AsyncBenchmark {
+struct Concdict: ActorBenchmark {
   uint64_t workers;
   uint64_t messages;
   uint64_t percentage;
