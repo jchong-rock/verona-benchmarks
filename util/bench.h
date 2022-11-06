@@ -62,7 +62,7 @@ struct BenchmarkHarness {
   opt::Opt opt;
 
   size_t cores;
-  size_t repetitions;
+  size_t repetitions = 1;
   bool detect_leaks;
   std::unique_ptr<Writer> writer;
 
@@ -127,9 +127,12 @@ struct BenchmarkHarness {
 //    detect_leaks = !opt.has("--allow_leaks");
     Scheduler::set_detect_leaks(detect_leaks);
 
-    writer = opt.has("--csv") ? std::unique_ptr<Writer>{std::make_unique<CSVWriter>()} : std::make_unique<ConsoleWriter>();
+    if (opt.has("--scale"))
+    {
+      writer = opt.has("--csv") ? std::unique_ptr<Writer>{std::make_unique<CSVWriter>()} : std::make_unique<ConsoleWriter>();
 
-    writer->writeHeader();
+      writer->writeHeader();
+    }
   }
 
   template<typename T, typename...Args>
@@ -143,7 +146,7 @@ struct BenchmarkHarness {
       for (size_t i = 0; i < repetitions; ++i) {
         Scheduler& sched = Scheduler::get();
 
-        sched.init(cores);
+        sched.init(c);
 
         high_resolution_clock::time_point start = high_resolution_clock::now();
 
@@ -155,7 +158,7 @@ struct BenchmarkHarness {
         samples.add(duration);
 
         if (opt.has("--scale"))
-          std::cout << benchmark.paradigm() << ", " << c << ", " << benchmark.name() << ", " << duration << std::endl;
+          std::cout << benchmark.paradigm() << "," << c << "," << benchmark.name() << ", " << duration << std::endl;
 
         if (detect_leaks)
           snmalloc::debug_check_empty<snmalloc::Alloc::Config>();
