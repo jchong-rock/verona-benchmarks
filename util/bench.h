@@ -138,30 +138,36 @@ struct BenchmarkHarness {
 
     T benchmark(std::forward<Args>(args)...);
 
-    for (size_t i = 0; i < repetitions; ++i) {
-      Scheduler& sched = Scheduler::get();
+    size_t min_cores = opt.has("--scale") ? 1 : cores;
+    for (size_t c = min_cores; c <= cores; c++) {
+      for (size_t i = 0; i < repetitions; ++i) {
+        Scheduler& sched = Scheduler::get();
 
-      sched.init(cores);
+        sched.init(cores);
 
-      high_resolution_clock::time_point start = high_resolution_clock::now();
+        high_resolution_clock::time_point start = high_resolution_clock::now();
 
-      benchmark.run();
+        benchmark.run();
 
-      sched.run();
+        sched.run();
 
-      auto duration = duration_cast<milliseconds>((high_resolution_clock::now() - start)).count();
-      samples.add(duration);
+        auto duration = duration_cast<milliseconds>((high_resolution_clock::now() - start)).count();
+        samples.add(duration);
 
-//      std::cout << benchmark.paradigm() << ", " << c << ", " << benchmark.name() << ", " << duration << std::endl;
+        if (opt.has("--scale"))
+          std::cout << benchmark.paradigm() << ", " << c << ", " << benchmark.name() << ", " << duration << std::endl;
 
-      if (detect_leaks)
-        snmalloc::debug_check_empty<snmalloc::Alloc::Config>();
+        if (detect_leaks)
+          snmalloc::debug_check_empty<snmalloc::Alloc::Config>();
 
-#ifdef USE_SYSTEMATIC_TESTING
-      get_seed()++;
-      printf("Seed: %zu\n", get_seed());
-#endif
+  #ifdef USE_SYSTEMATIC_TESTING
+        get_seed()++;
+        printf("Seed: %zu\n", get_seed());
+  #endif
+      }
     }
+    if (opt.has("--scale"))
+      return;
 
     writer->writeEntry(benchmark.name(), samples.mean(), samples.median(), samples.ref_err(), samples.stddev());
   }
