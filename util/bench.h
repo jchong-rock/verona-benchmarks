@@ -33,7 +33,7 @@ struct Writer {
 
 struct CSVWriter: public Writer {
   void writeHeader() override {
-    std::cout << "benchmark,mean,median,error,stddev" << std::endl;
+    std::cout << "benchmark,mean,median,error" << std::endl;
   }
 
   void writeEntry(std::string benchmark, double mean, double median, double error, double stddev) override {
@@ -72,29 +72,36 @@ struct BenchmarkHarness {
   }
 
   BenchmarkHarness(const int argc, const char** argv) : opt(argc, argv) {
-    std::cout << "BenchmarkHarness starting." << std::endl;
-
-    for (int i = 0; i < argc; i++)
-    {
-      std::cout << " " << argv[i];
-    }
-
+    
 #ifdef USE_SYSTEMATIC_TESTING
-    if (opt.has("--seed"))
-    {
-      get_seed() = opt.is<size_t>("--seed", 0);
-    }
-    else
-    {
-      get_seed() = ((snmalloc::Aal::tick()) & 0xffffffff) * 1000;
-      std::cout << " --seed " << get_seed();
-    }
+      if (opt.has("--seed"))
+      {
+        get_seed() = opt.is<size_t>("--seed", 0);
+      }
+      else
+      {
+        get_seed() = ((snmalloc::Aal::tick()) & 0xffffffff) * 1000;
+      }
 #else
-    get_seed() = opt.is<size_t>("--seed", 123456);
+      get_seed() = opt.is<size_t>("--seed", 123456);
 #endif
 
-    std::cout << std::endl;
+    if(!opt.has("--csv"))
+    {
+      std::cout << "BenchmarkHarness starting." << std::endl;
 
+      for (int i = 0; i < argc; i++)
+      {
+        std::cout << " " << argv[i];
+      }
+
+      if (!opt.has("--seed"))
+      {
+        std::cout << " --seed " << get_seed();
+      }
+
+      std::cout << std::endl;
+    }
     cores = opt.is<size_t>("--cores", 4);
 
 #ifdef USE_SYSTEMATIC_TESTING
@@ -142,7 +149,10 @@ struct BenchmarkHarness {
 
       sched.run();
 
-      samples.add(duration_cast<milliseconds>((high_resolution_clock::now() - start)).count());
+      auto duration = duration_cast<milliseconds>((high_resolution_clock::now() - start)).count();
+      samples.add(duration);
+
+//      std::cout << benchmark.paradigm() << ", " << c << ", " << benchmark.name() << ", " << duration << std::endl;
 
       if (detect_leaks)
         snmalloc::debug_check_empty<snmalloc::Alloc::Config>();
