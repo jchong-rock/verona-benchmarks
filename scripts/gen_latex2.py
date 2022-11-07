@@ -75,6 +75,8 @@ if __name__ == '__main__':
       map_p1  = process(rp1, benchmarks)
       map_p8  = process(rp8, benchmarks)
 
+      benchmarks = {"Banking", "Dining Philosophers", "Fib", "Logistic Map Series", "Sleeping Barber"}
+
       for benchmark in sorted(benchmarks):
         if benchmark == "Recursive Matrix Multiplication":
           print("Matrix Mult")
@@ -85,15 +87,11 @@ if __name__ == '__main__':
             print(benchmark)
         benchmark = benchmark
         print("&")
-        print_entry(benchmark, map_p1)
-        print("&")
-        print_entry(benchmark, map_p8)
-        print("&")
         print_entry(benchmark, map_ba1)
         print("&")
         print_entry(benchmark, map_ba8)
-        # print("&")
-        # print_entry(benchmark, map_bf1)
-        # print("&")
-        # print_entry(benchmark, map_bf8)
+        print("&")
+        print_entry(benchmark, map_bf1)
+        print("&")
+        print_entry(benchmark, map_bf8)
         print("\\\\")
