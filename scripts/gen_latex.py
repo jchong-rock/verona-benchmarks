@@ -54,15 +54,11 @@ if __name__ == '__main__':
     # Dump it as a csv file so we can use it for pgfplots
     with open(output_directory + f"/boc_actor{1}.csv", 'r') as ba1,\
       open(output_directory + f"/boc_actor{4}.csv", 'r') as ba8,\
-      open(output_directory + f"/boc_full{1}.csv", 'r') as bf1,\
-      open(output_directory + f"/boc_full{4}.csv", 'r')  as bf8,\
       open(output_directory + f"/pony{1}.csv", 'r')      as p1,\
       open(output_directory + f"/pony{4}.csv", 'r') as p8:
 
       rba1 = csv.reader(ba1)
       rba8 = csv.reader(ba8)
-      rbf1 = csv.reader(bf1)
-      rbf8 = csv.reader(bf8)
       rp1  = csv.reader(p1)
       rp8  = csv.reader(p8)
 
@@ -70,8 +66,6 @@ if __name__ == '__main__':
 
       map_ba1 = process(rba1, benchmarks)
       map_ba8 = process(rba8, benchmarks)
-      map_bf1 = process(rbf1, benchmarks)
-      map_bf8 = process(rbf8, benchmarks)
       map_p1  = process(rp1, benchmarks)
       map_p8  = process(rp8, benchmarks)
 
@@ -92,8 +86,4 @@ if __name__ == '__main__':
         print_entry(benchmark, map_ba1)
         print("&")
         print_entry(benchmark, map_ba8)
-        # print("&")
-        # print_entry(benchmark, map_bf1)
-        # print("&")
-        # print_entry(benchmark, map_bf8)
         print("\\\\")
