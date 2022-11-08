@@ -31,9 +31,10 @@ struct Teller {
   SimpleRand random;
   uint64_t completed;
   std::vector<cown_ptr<Account>> accounts;
+  bool busy_wait;
 
-  Teller(double initial_balance, uint64_t num_accounts, uint64_t transactions):
-    initial_balance(initial_balance), transactions(transactions), random(SimpleRand(123456)), completed(0) {
+  Teller(double initial_balance, uint64_t num_accounts, uint64_t transactions, bool busy_wait):
+    initial_balance(initial_balance), transactions(transactions), random(SimpleRand(123456)), completed(0), busy_wait(busy_wait) {
 
     for (uint64_t i = 0; i < num_accounts; i++)
     {
@@ -61,9 +62,12 @@ struct Teller {
         const cown_ptr<Account>& dst = self->accounts[dest];
         double amount = self->random.nextDouble() * 1000;
 
-        when(src, dst) << [amount, tag](acquired_cown<Account> src, acquired_cown<Account> dst) mutable {
+        when(src, dst) << [busy_wait = self->busy_wait, amount, tag](acquired_cown<Account> src, acquired_cown<Account> dst) mutable {
           src->debit(amount);
           dst->credit(amount);
+          if (busy_wait) {
+            busy_loop(10);
+          }
           Teller::reply(tag);
         };
 
@@ -83,18 +87,19 @@ struct Teller {
 
 };
 
-struct Banking: public AsyncBenchmark {
+struct Banking: public BocBenchmark {
   uint64_t accounts;
   uint64_t transactions;
   double initial;
+  bool busy_wait;
 
-  Banking(uint64_t accounts, uint64_t transactions): accounts(accounts), transactions(transactions) {
+  Banking(uint64_t accounts, uint64_t transactions, bool busy_wait = false): accounts(accounts), transactions(transactions), busy_wait(busy_wait) {
     initial = DBL_MAX / float(accounts * transactions);
   }
 
   void run() {
     using namespace banking;
-    Teller::spawn_transactions(make_cown<Teller>(initial, accounts, transactions));
+    Teller::spawn_transactions(make_cown<Teller>(initial, accounts, transactions, busy_wait));
   }
 
   std::string name() { return "Banking"; }

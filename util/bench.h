@@ -13,7 +13,16 @@ template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 struct AsyncBenchmark {
   virtual void run()=0;
   virtual std::string name()=0;
+  virtual std::string paradigm()=0;
   virtual ~AsyncBenchmark() {}
+};
+
+struct BocBenchmark: public AsyncBenchmark {
+  std::string paradigm() { return "boc"; }
+};
+
+struct ActorBenchmark: public AsyncBenchmark {
+  std::string paradigm() { return "actor"; }
 };
 
 struct Writer {
@@ -24,7 +33,7 @@ struct Writer {
 
 struct CSVWriter: public Writer {
   void writeHeader() override {
-    std::cout << "benchmark,mean,median,error,stddev" << std::endl;
+    std::cout << "benchmark,mean,median,error" << std::endl;
   }
 
   void writeEntry(std::string benchmark, double mean, double median, double error, double stddev) override {
@@ -53,7 +62,7 @@ struct BenchmarkHarness {
   opt::Opt opt;
 
   size_t cores;
-  size_t repetitions;
+  size_t repetitions = 1;
   bool detect_leaks;
   std::unique_ptr<Writer> writer;
 
@@ -63,29 +72,36 @@ struct BenchmarkHarness {
   }
 
   BenchmarkHarness(const int argc, const char** argv) : opt(argc, argv) {
-    std::cout << "BenchmarkHarness starting." << std::endl;
-
-    for (int i = 0; i < argc; i++)
-    {
-      std::cout << " " << argv[i];
-    }
-
+    
 #ifdef USE_SYSTEMATIC_TESTING
-    if (opt.has("--seed"))
-    {
-      get_seed() = opt.is<size_t>("--seed", 0);
-    }
-    else
-    {
-      get_seed() = ((snmalloc::Aal::tick()) & 0xffffffff) * 1000;
-      std::cout << " --seed " << get_seed();
-    }
+      if (opt.has("--seed"))
+      {
+        get_seed() = opt.is<size_t>("--seed", 0);
+      }
+      else
+      {
+        get_seed() = ((snmalloc::Aal::tick()) & 0xffffffff) * 1000;
+      }
 #else
-    get_seed() = opt.is<size_t>("--seed", 123456);
+      get_seed() = opt.is<size_t>("--seed", 123456);
 #endif
 
-    std::cout << std::endl;
+    if(!opt.has("--csv"))
+    {
+      std::cout << "BenchmarkHarness starting." << std::endl;
 
+      for (int i = 0; i < argc; i++)
+      {
+        std::cout << " " << argv[i];
+      }
+
+      if (!opt.has("--seed"))
+      {
+        std::cout << " --seed " << get_seed();
+      }
+
+      std::cout << std::endl;
+    }
     cores = opt.is<size_t>("--cores", 4);
 
 #ifdef USE_SYSTEMATIC_TESTING
@@ -111,9 +127,12 @@ struct BenchmarkHarness {
 //    detect_leaks = !opt.has("--allow_leaks");
     Scheduler::set_detect_leaks(detect_leaks);
 
-    writer = opt.has("--csv") ? std::unique_ptr<Writer>{std::make_unique<CSVWriter>()} : std::make_unique<ConsoleWriter>();
+    if (opt.has("--scale"))
+    {
+      writer = opt.has("--csv") ? std::unique_ptr<Writer>{std::make_unique<CSVWriter>()} : std::make_unique<ConsoleWriter>();
 
-    writer->writeHeader();
+      writer->writeHeader();
+    }
   }
 
   template<typename T, typename...Args>
@@ -122,27 +141,36 @@ struct BenchmarkHarness {
 
     T benchmark(std::forward<Args>(args)...);
 
-    for (size_t i = 0; i < repetitions; ++i) {
-      Scheduler& sched = Scheduler::get();
+    size_t min_cores = opt.has("--scale") ? 1 : cores;
+    for (size_t c = min_cores; c <= cores; c++) {
+      for (size_t i = 0; i < repetitions; ++i) {
+        Scheduler& sched = Scheduler::get();
 
-      sched.init(cores);
+        sched.init(c);
 
-      high_resolution_clock::time_point start = high_resolution_clock::now();
+        high_resolution_clock::time_point start = high_resolution_clock::now();
 
-      benchmark.run();
+        benchmark.run();
 
-      sched.run();
+        sched.run();
 
-      samples.add(duration_cast<milliseconds>((high_resolution_clock::now() - start)).count());
+        auto duration = duration_cast<milliseconds>((high_resolution_clock::now() - start)).count();
+        samples.add(duration);
 
-      if (detect_leaks)
-        snmalloc::debug_check_empty<snmalloc::Alloc::Config>();
+        if (opt.has("--scale"))
+          std::cout << benchmark.paradigm() << "," << c << "," << benchmark.name() << ", " << duration << std::endl;
 
-#ifdef USE_SYSTEMATIC_TESTING
-      get_seed()++;
-      printf("Seed: %zu\n", get_seed());
-#endif
+        if (detect_leaks)
+          snmalloc::debug_check_empty<snmalloc::Alloc::Config>();
+
+  #ifdef USE_SYSTEMATIC_TESTING
+        get_seed()++;
+        printf("Seed: %zu\n", get_seed());
+  #endif
+      }
     }
+    if (opt.has("--scale"))
+      return;
 
     writer->writeEntry(benchmark.name(), samples.mean(), samples.median(), samples.ref_err(), samples.stddev());
   }

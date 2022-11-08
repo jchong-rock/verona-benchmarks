@@ -45,7 +45,7 @@ void ForkJoinMaster::done(const cown_ptr<ForkJoinMaster>& self) {
 
 };
 
-struct Fjcreate: public AsyncBenchmark {
+struct Fjcreate: public ActorBenchmark {
   uint64_t workers;
 
   Fjcreate(uint64_t workers): workers(workers) {}

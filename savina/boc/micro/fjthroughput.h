@@ -63,7 +63,7 @@ void Throughput::compute(cown_ptr<Throughput> throughput) {
 
 };
 
-struct Fjthrput: public AsyncBenchmark {
+struct Fjthrput: public BocBenchmark {
   uint64_t messages;
   uint64_t actors;
   uint64_t channels;

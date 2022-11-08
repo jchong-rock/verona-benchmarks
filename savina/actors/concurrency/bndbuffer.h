@@ -156,7 +156,7 @@ void Manager::exit(const cown_ptr<Manager>& self) {
 
 };
 
-struct BndBuffer: public AsyncBenchmark {
+struct BndBuffer: public ActorBenchmark {
   const uint64_t buffersize;
   const uint64_t producers;
   const uint64_t consumers;

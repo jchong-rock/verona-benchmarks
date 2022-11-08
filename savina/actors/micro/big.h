@@ -93,7 +93,7 @@ void BigActor::pong(const cown_ptr<BigActor>& self, int64_t n) {
 
 };
 
-struct Big: AsyncBenchmark {
+struct Big: ActorBenchmark {
   uint64_t pings;
   uint64_t actors;
 

@@ -148,7 +148,7 @@ void SeriesWorker::get(const cown_ptr<SeriesWorker>& self) {
 
 };
 
-struct Logmap: public AsyncBenchmark {
+struct Logmap: public ActorBenchmark {
   uint64_t terms;
   uint64_t series;
   double rate;

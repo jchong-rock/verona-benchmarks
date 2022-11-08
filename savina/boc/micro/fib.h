@@ -27,7 +27,7 @@ struct Fibonacci {
 
 };
 
-struct Fib: public AsyncBenchmark {
+struct Fib: public BocBenchmark {
   uint64_t index;
 
   Fib(uint64_t index): index(index) {}

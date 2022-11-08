@@ -314,7 +314,7 @@ void Manager::exit(cown_ptr<Manager> self) {
   };
 }
 
-struct BndBuffer: public AsyncBenchmark {
+struct BndBuffer: public BocBenchmark {
   const uint64_t buffersize;
   const uint64_t producers;
   const uint64_t consumers;
@@ -335,7 +335,7 @@ struct BndBuffer: public AsyncBenchmark {
 #endif
 };
 
-struct BndBuffer: public AsyncBenchmark {
+struct BndBuffer: public BocBenchmark {
   const uint64_t buffersize;
   const uint64_t producers;
   const uint64_t consumers;

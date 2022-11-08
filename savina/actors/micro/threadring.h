@@ -36,7 +36,7 @@ struct RingActor {
 
 };
 
-struct ThreadRing: public AsyncBenchmark {
+struct ThreadRing: public ActorBenchmark {
   uint64_t actors;
   uint64_t pass;
 

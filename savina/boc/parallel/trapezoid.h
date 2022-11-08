@@ -90,7 +90,7 @@ cown_ptr<double> Worker::create(double left, double right, double precision) {
 
 };
 
-struct Trapezoid: public AsyncBenchmark {
+struct Trapezoid: public BocBenchmark {
   uint64_t pieces;
   uint64_t workers;
   uint64_t left;

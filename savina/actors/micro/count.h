@@ -46,7 +46,7 @@ void Counter::retrieve(const cown_ptr<Counter>& self, cown_ptr<Producer> sender)
 
 };
 
-struct Count: AsyncBenchmark {
+struct Count: ActorBenchmark {
   uint64_t messages;
 
   Count(uint64_t messages): messages(messages) {}

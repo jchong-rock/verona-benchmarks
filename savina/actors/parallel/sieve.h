@@ -87,7 +87,7 @@ namespace NumberProducer {
 
 };
 
-struct Sieve: public AsyncBenchmark {
+struct Sieve: public ActorBenchmark {
   uint64_t size;
   uint64_t buffersize;
 

@@ -47,7 +47,7 @@ void Pong::ping(const cown_ptr<Pong>& self, cown_ptr<Ping> sender) {
 
 };
 
-struct PingPong: public AsyncBenchmark {
+struct PingPong: public ActorBenchmark {
   uint64_t pings;
 
   PingPong(uint64_t pings): pings(pings) {}

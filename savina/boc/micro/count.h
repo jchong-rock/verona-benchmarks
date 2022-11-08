@@ -33,7 +33,7 @@ struct Producer {
 
 };
 
-struct Count: AsyncBenchmark {
+struct Count: BocBenchmark {
   uint64_t messages;
 
   Count(uint64_t messages): messages(messages) {}

@@ -91,7 +91,7 @@ void Philosopher::eat(const cown_ptr<Philosopher>& self) {
 
 };
 
-struct DiningPhilosophers: public AsyncBenchmark {
+struct DiningPhilosophers: public ActorBenchmark {
   uint64_t philosophers;
   uint64_t rounds;
   uint64_t channels;
