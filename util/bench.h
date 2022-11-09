@@ -127,10 +127,9 @@ struct BenchmarkHarness {
 //    detect_leaks = !opt.has("--allow_leaks");
     Scheduler::set_detect_leaks(detect_leaks);
 
-    if (opt.has("--scale"))
+    if (!opt.has("--scale"))
     {
       writer = opt.has("--csv") ? std::unique_ptr<Writer>{std::make_unique<CSVWriter>()} : std::make_unique<ConsoleWriter>();
-
       writer->writeHeader();
     }
   }

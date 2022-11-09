@@ -13,6 +13,7 @@
 #include "micro/fib.h"
 #include "micro/fjcreate.h"
 #include "micro/fjthroughput.h"
+#include "micro/nop.h"
 #include "micro/pingpong.h"
 #include "micro/threadring.h"
 

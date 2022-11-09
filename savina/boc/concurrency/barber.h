@@ -11,122 +11,122 @@ namespace barber {
 using namespace verona::cpp;
 using namespace std;
 
-#if false
+// #if false
 
-struct Customer;
-struct WaitingRoom;
+// struct Customer;
+// struct WaitingRoom;
 
-struct CustomerFactory {
-  uint64_t number_of_haircuts;
-  uint64_t attempts;
-  cown_ptr<WaitingRoom> room;
+// struct CustomerFactory {
+//   uint64_t number_of_haircuts;
+//   uint64_t attempts;
+//   cown_ptr<WaitingRoom> room;
 
-  CustomerFactory(uint64_t number_of_haircuts, const cown_ptr<WaitingRoom>& room):
-    number_of_haircuts(number_of_haircuts), attempts(0), room(room) {}
+//   CustomerFactory(uint64_t number_of_haircuts, const cown_ptr<WaitingRoom>& room):
+//     number_of_haircuts(number_of_haircuts), attempts(0), room(room) {}
 
-  static void run(const cown_ptr<CustomerFactory>&, uint64_t);
-  static void returned(const cown_ptr<CustomerFactory>&, unique_ptr<Customer>);
-  static void left(const cown_ptr<CustomerFactory>&, unique_ptr<Customer>);
-};
+//   static void run(const cown_ptr<CustomerFactory>&, uint64_t);
+//   static void returned(const cown_ptr<CustomerFactory>&, unique_ptr<Customer>);
+//   static void left(const cown_ptr<CustomerFactory>&, unique_ptr<Customer>);
+// };
 
-struct Customer {
-  cown_ptr<CustomerFactory> factory;
+// struct Customer {
+//   cown_ptr<CustomerFactory> factory;
 
-  Customer(const cown_ptr<CustomerFactory>& factory): factory(factory) {}
+//   Customer(const cown_ptr<CustomerFactory>& factory): factory(factory) {}
 
-  static void full(unique_ptr<Customer>);
-  static void pay_and_leave(unique_ptr<Customer>);
-  // void wait();
-  // void sit_down() {};
-};
+//   static void full(unique_ptr<Customer>);
+//   static void pay_and_leave(unique_ptr<Customer>);
+//   // void wait();
+//   // void sit_down() {};
+// };
 
-struct Barber {
-  uint64_t haircut_rate;
+// struct Barber {
+//   uint64_t haircut_rate;
 
-  Barber(uint64_t haircut_rate): haircut_rate(haircut_rate) {}
+//   Barber(uint64_t haircut_rate): haircut_rate(haircut_rate) {}
 
-  static void wait(const cown_ptr<Barber>&);
-};
+//   static void wait(const cown_ptr<Barber>&);
+// };
 
-static uint64_t BusyWaiter(uint64_t wait) {
-  uint64_t x = 0;
+// static uint64_t BusyWaiter(uint64_t wait) {
+//   uint64_t x = 0;
 
-  for (uint64_t i = 0; i < wait; ++i) {
-    Rand().next();
-    x++;
-  }
+//   for (uint64_t i = 0; i < wait; ++i) {
+//     Rand().next();
+//     x++;
+//   }
 
-  return x;
-}
+//   return x;
+// }
 
-struct WaitingRoom {
-  const uint64_t size;
-  std::deque<unique_ptr<Customer>> customers;
-  cown_ptr<Barber> barber;
+// struct WaitingRoom {
+//   const uint64_t size;
+//   std::deque<unique_ptr<Customer>> customers;
+//   cown_ptr<Barber> barber;
 
-  WaitingRoom(uint64_t size, const cown_ptr<Barber>& barber): size(size), barber(barber) {}
+//   WaitingRoom(uint64_t size, const cown_ptr<Barber>& barber): size(size), barber(barber) {}
 
-  static void enter(const cown_ptr<WaitingRoom>& wr, unique_ptr<Customer> customer) {
-    when(wr) << [tag=wr, customer=move(customer)](acquired_cown<WaitingRoom> wr) mutable {
-      if (wr->customers.size() == wr->size) {
-        Customer::full(move(customer));
-      } else {
-        wr->customers.push_back(move(customer));
-        WaitingRoom::next(tag, wr->barber);
-      }
-    };
-  }
+//   static void enter(const cown_ptr<WaitingRoom>& wr, unique_ptr<Customer> customer) {
+//     when(wr) << [tag=wr, customer=move(customer)](acquired_cown<WaitingRoom> wr) mutable {
+//       if (wr->customers.size() == wr->size) {
+//         Customer::full(move(customer));
+//       } else {
+//         wr->customers.push_back(move(customer));
+//         WaitingRoom::next(tag, wr->barber);
+//       }
+//     };
+//   }
 
-  static void next(const cown_ptr<WaitingRoom>& wr, const cown_ptr<Barber>& barber) {
-    // starves a customer waiting to sit down
-    when(wr, barber) << [wr_tag=wr, barber_tag=barber](acquired_cown<WaitingRoom> wr, acquired_cown<Barber> barber) mutable {
-      if (wr->customers.size() > 0) {
-        unique_ptr<Customer> customer = move(wr->customers.front());
-        wr->customers.pop_front();
+//   static void next(const cown_ptr<WaitingRoom>& wr, const cown_ptr<Barber>& barber) {
+//     // starves a customer waiting to sit down
+//     when(wr, barber) << [wr_tag=wr, barber_tag=barber](acquired_cown<WaitingRoom> wr, acquired_cown<Barber> barber) mutable {
+//       if (wr->customers.size() > 0) {
+//         unique_ptr<Customer> customer = move(wr->customers.front());
+//         wr->customers.pop_front();
 
-        BusyWaiter(Rand(time_point_cast<nanoseconds>(system_clock::now()).time_since_epoch().count()).integer(barber->haircut_rate) + 10);
-        Customer::pay_and_leave(move(customer));
-        WaitingRoom::next(wr_tag, barber_tag);
-      }
-    };
-  }
-};
+//         BusyWaiter(Rand(time_point_cast<nanoseconds>(system_clock::now()).time_since_epoch().count()).integer(barber->haircut_rate) + 10);
+//         Customer::pay_and_leave(move(customer));
+//         WaitingRoom::next(wr_tag, barber_tag);
+//       }
+//     };
+//   }
+// };
 
-void Barber::wait(const cown_ptr<Barber>& self) { when(self) << [](acquired_cown<Barber>){}; }
+// void Barber::wait(const cown_ptr<Barber>& self) { when(self) << [](acquired_cown<Barber>){}; }
 
-void CustomerFactory::returned(const cown_ptr<CustomerFactory>& factory, unique_ptr<Customer> customer) {
-  when(factory) << [customer=move(customer)](acquired_cown<CustomerFactory> factory) mutable {
-    factory->attempts++;
-    WaitingRoom::enter(factory->room, move(customer));
-  };
-}
+// void CustomerFactory::returned(const cown_ptr<CustomerFactory>& factory, unique_ptr<Customer> customer) {
+//   when(factory) << [customer=move(customer)](acquired_cown<CustomerFactory> factory) mutable {
+//     factory->attempts++;
+//     WaitingRoom::enter(factory->room, move(customer));
+//   };
+// }
 
-// TODO: in verona we don't need to send a message back to the framework
-void CustomerFactory::left(const cown_ptr<CustomerFactory>& factory, unique_ptr<Customer> customer) {
-  when(factory) << [](acquired_cown<CustomerFactory> factory) {
-    factory->number_of_haircuts--;
-    if (factory->number_of_haircuts == 0) {
-      // std::cout << "attempts: " << factory->attempts << std::endl;
-      return;
-    }
-  };
-}
+// // TODO: in verona we don't need to send a message back to the framework
+// void CustomerFactory::left(const cown_ptr<CustomerFactory>& factory, unique_ptr<Customer> customer) {
+//   when(factory) << [](acquired_cown<CustomerFactory> factory) {
+//     factory->number_of_haircuts--;
+//     if (factory->number_of_haircuts == 0) {
+//       // std::cout << "attempts: " << factory->attempts << std::endl;
+//       return;
+//     }
+//   };
+// }
 
-void CustomerFactory::run(const cown_ptr<CustomerFactory>& factory, uint64_t rate) {
-  when(factory) << [tag=factory, rate](acquired_cown<CustomerFactory> factory) mutable {
-    for (uint64_t i = 0; i < factory->number_of_haircuts; ++i) {
-      factory->attempts++;
-      WaitingRoom::enter(factory->room, make_unique<Customer>(tag));
-      BusyWaiter(Rand(time_point_cast<nanoseconds>(system_clock::now()).time_since_epoch().count()).integer(rate) + 10);
-    }
-  };
-}
+// void CustomerFactory::run(const cown_ptr<CustomerFactory>& factory, uint64_t rate) {
+//   when(factory) << [tag=factory, rate](acquired_cown<CustomerFactory> factory) mutable {
+//     for (uint64_t i = 0; i < factory->number_of_haircuts; ++i) {
+//       factory->attempts++;
+//       WaitingRoom::enter(factory->room, make_unique<Customer>(tag));
+//       BusyWaiter(Rand(time_point_cast<nanoseconds>(system_clock::now()).time_since_epoch().count()).integer(rate) + 10);
+//     }
+//   };
+// }
 
-void Customer::full(unique_ptr<Customer> customer) { auto factory = customer->factory; CustomerFactory::returned(factory, move(customer)); }
+// void Customer::full(unique_ptr<Customer> customer) { auto factory = customer->factory; CustomerFactory::returned(factory, move(customer)); }
 
-void Customer::pay_and_leave(unique_ptr<Customer> customer) { auto factory = customer->factory; CustomerFactory::left(factory, move(customer)); }
+// void Customer::pay_and_leave(unique_ptr<Customer> customer) { auto factory = customer->factory; CustomerFactory::left(factory, move(customer)); }
 
-#else
+// #else
 
 struct Customer;
 struct WaitingRoom;
@@ -239,7 +239,7 @@ void CustomerFactory::run(cown_ptr<CustomerFactory>&& self, uint64_t rate) {
 void Customer::full(const cown_ptr<Customer>& self) { when(self) << [](acquired_cown<Customer> self){ CustomerFactory::returned(self->factory, self.cown()); }; }
 
 void Customer::wait() { }
-#endif
+//#endif
 
 };
 
