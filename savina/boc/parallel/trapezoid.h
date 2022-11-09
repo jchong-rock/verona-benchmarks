@@ -27,7 +27,7 @@ namespace Master {
       partial_results.emplace_back(Worker::create(left, left + range, precision));
     }
 
-#if true
+//#if true
    // two ways of reducing but both seem equally in speed:
    // - first is pair the 0th elem with every element of the list, so n messages but must be pipelined
    // - second creates a tree like reduction, has more parallelism but more messages
@@ -37,19 +37,19 @@ namespace Master {
         *r += *pr;
       };
     }
-#else
-    uint64_t its = ceil(log2(partial_results.size() + 1));
+// #else
+//     uint64_t its = ceil(log2(partial_results.size() + 1));
 
-    for (uint64_t j = 0; j < its; ++j) {
-      for (uint64_t i = 0; i < partial_results.size(); i += (1 << (j + 1))) {
-        if (i + (1 << j) < partial_results.size()) {
-          when(partial_results[i], partial_results[i + (1 << j)]) << [](acquired_cown<double> r, acquired_cown<double> pr) {
-            *r += *pr;
-          };
-        }
-      }
-    }
-#endif
+//     for (uint64_t j = 0; j < its; ++j) {
+//       for (uint64_t i = 0; i < partial_results.size(); i += (1 << (j + 1))) {
+//         if (i + (1 << j) < partial_results.size()) {
+//           when(partial_results[i], partial_results[i + (1 << j)]) << [](acquired_cown<double> r, acquired_cown<double> pr) {
+//             *r += *pr;
+//           };
+//         }
+//       }
+//     }
+// #endif
     return partial_results[0];
   }
 };
