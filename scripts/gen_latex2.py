@@ -51,6 +51,59 @@ if __name__ == '__main__':
 
     output_directory = args.o
 
+def run_cloc():
+    # Not currently working so manually run cloc:
+    # cloc . --match-d="actors|boc" --by-file --quiet --csv --out=cloc_raw.csv   
+    # subprocess.run(["cloc", ".", "--match-d=actors|boc", "--by-file", "--quiet", "--csv", "--out=cloc_raw.csv"])
+
+if __name__ == '__main__':
+    args = getopts()
+
+    benchfilemap = {
+      'Banking': 'concurrency/banking.h',
+      'Chameneos': 'micro/chameneos.h',
+      'Count': 'micro/count.h',
+      'Dining Philosophers': 'concurrency/philosopher.h',
+      'Fib': 'micro/fib.h',
+      'Fork-Join Create': 'micro/fjcreate.h',
+      'Fork-Join Throughput': 'micro/fjthroughput.h',
+      'Logistic Map Series': 'concurrency/logmap.h',
+      'Quicksort' : 'parallel/quicksort.h',
+      'Sleeping Barber': 'concurrency/barber.h',
+      'Trapezoid': 'parallel/trapezoid.h'}
+
+    filebenchmap = {v: k for k, v in benchfilemap.items()}
+
+    run_cloc()
+    loc_actor = {}
+    loc_full = {}
+
+    with open("cloc_raw.csv", "r") as file:    
+      reader = csv.reader(file, delimiter=',')
+
+      for row in reader:
+        if (len(row) == 5):
+          language, filename, blank, comment, code = row
+          # check if filename begins with actors/ or boc/
+          if filename.startswith("./actors/"):
+            # strip actors/ from filename
+            filename = filename[9:]
+            # check if filename is in filebenchmap
+            if filename in filebenchmap:
+              # get benchmark name
+              benchmark = filebenchmap[filename]
+              # print benchmark, code
+              loc_actor[benchmark] = int(code)
+          if filename.startswith("./boc/"):
+            # strip actors/ from filename
+            filename = filename[6:]
+            # check if filename is in filebenchmap
+            if filename in filebenchmap:
+              # get benchmark name
+              benchmark = filebenchmap[filename]
+              # print benchmark, code
+              loc_full[benchmark] = int(code)
+
     # Dump it as a csv file so we can use it for pgfplots
     with open(output_directory + f"/boc_actor{1}.csv", 'r') as ba1,\
       open(output_directory + f"/boc_actor{4}.csv", 'r') as ba8,\
@@ -63,8 +116,8 @@ if __name__ == '__main__':
       rba8 = csv.reader(ba8)
       rbf1 = csv.reader(bf1)
       rbf8 = csv.reader(bf8)
-      rp1  = csv.reader(p1)
-      rp8  = csv.reader(p8)
+      # rp1  = csv.reader(p1)
+      # rp8  = csv.reader(p8)
 
       benchmarks = set()
 
@@ -72,10 +125,12 @@ if __name__ == '__main__':
       map_ba8 = process(rba8, benchmarks)
       map_bf1 = process(rbf1, benchmarks)
       map_bf8 = process(rbf8, benchmarks)
-      map_p1  = process(rp1, benchmarks)
-      map_p8  = process(rp8, benchmarks)
+      # map_p1  = process(rp1, benchmarks)
+      # map_p8  = process(rp8, benchmarks)
 
-      benchmarks = {"Banking", "Dining Philosophers", "Fib", "Logistic Map Series", "Sleeping Barber"}
+      # caclculate set of benchmarks in map_bf1
+      benchmarks = {k for k in benchmarks if k in map_bf1 and k != "Concurrent Dictionary"}
+#      benchmarks = {"Banking", "Dining Philosophers", "Fib", "Logistic Map Series", "Sleeping Barber"}
 
       for benchmark in sorted(benchmarks):
         if benchmark == "Recursive Matrix Multiplication":
@@ -87,9 +142,13 @@ if __name__ == '__main__':
             print(benchmark)
         benchmark = benchmark
         print("&")
+        print(loc_actor[benchmark])
+        print("&")
         print_entry(benchmark, map_ba1)
         print("&")
         print_entry(benchmark, map_ba8)
+        print("&")
+        print(loc_full[benchmark])
         print("&")
         print_entry(benchmark, map_bf1)
         print("&")
