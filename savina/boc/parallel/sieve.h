@@ -5,7 +5,7 @@
 namespace boc_benchmark
 {
 
-  struct Block
+  class Block
   {
     uint64_t base;
     std::vector<bool> sieve_block;
@@ -21,47 +21,42 @@ namespace boc_benchmark
       return sieve_block[i - base];
     }
 
-    void remove(uint64_t i, uint64_t m)
+    template<typename F>
+    void apply(uint64_t i, F f)
     {
       if (contains(i))
-      {
-        get(i) = false;
-        remove(i + m, m);
-      }
+        f(this, i);
       else
       {
-        if (next == nullptr)
-          return;
-
-        when(next) << [i, m](acquired_cown<Block> next) mutable
+        if (next)
         {
-          next->remove(i, m);
-        };
+          when (next) << [i, f=std::move(f)](acquired_cown<Block> next) mutable {
+            next->apply(i, std::move(f));
+          };
+        }
       }
+    }
+
+  public:
+    void remove(uint64_t i, uint64_t m)
+    {
+      apply(i, [m](Block* self, uint64_t i) {
+        self->get(i) = false;
+        self->remove(i + m, m);
+      });
     }
 
     void iterate(uint64_t i)
     {
-      if (contains(i))
-      {
-        if (get(i))
+      apply(i, [](Block* self, uint64_t i) {
+        if (self->get(i))
         {
           // We have found a prime
-          //          std::cout << "Prime: " << i << std::endl;
-          remove(i * 2, i);
+          // std::cout << "Prime: " << i << std::endl;
+          self->remove(i * 2, i);
         }
-        iterate(i + 1);
-      }
-      else
-      {
-        if (next == nullptr)
-          return;
-
-        when(next) << [i](acquired_cown<Block> next) mutable
-        {
-          next->iterate(i);
-        };
-      }
+        self->iterate(i + 1);
+      });
     }
 
     Block(uint64_t base, uint64_t size, cown_ptr<Block> next) : base(base), sieve_block(size, true), next(next) {}
