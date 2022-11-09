@@ -52,10 +52,10 @@ if __name__ == '__main__':
     output_directory = args.o
 
     # Dump it as a csv file so we can use it for pgfplots
-    with open(output_directory + f"/boc_actor{1}.csv", 'r') as ba1,\
-      open(output_directory + f"/boc_actor{4}.csv", 'r') as ba8,\
-      open(output_directory + f"/pony{1}.csv", 'r')      as p1,\
-      open(output_directory + f"/pony{4}.csv", 'r') as p8:
+    with open(output_directory + f"/boc_actor1.csv", 'r') as ba1,\
+      open(output_directory + f"/boc_actor8.csv", 'r') as ba8,\
+      open(output_directory + f"/pony1.csv", 'r')      as p1,\
+      open(output_directory + f"/pony8.csv", 'r') as p8:
 
       rba1 = csv.reader(ba1)
       rba8 = csv.reader(ba8)
@@ -70,6 +70,8 @@ if __name__ == '__main__':
       map_p8  = process(rp8, benchmarks)
 
       for benchmark in sorted(benchmarks):
+        if benchmark == "Banking 2PC":
+          continue
         if benchmark == "Recursive Matrix Multiplication":
           print("Matrix Mult")
         else:
