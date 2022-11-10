@@ -20,7 +20,39 @@ with open(verona_results, newline='') as csvfile:
     # Use logarithmic y-axis
     fig.update_yaxes(type="log")
 
-    fig.update_layout(xaxis_title="Cores", yaxis_title="Time in ms")
+    layout = go.Layout(
+        xaxis = dict(
+            title = 'Hardware Threads',
+            tick0 = 1,
+            dtick = 10,
+            range=[0, 41]
+        ),
+        yaxis = dict (
+            title = 'Time Taken (ms)',
+            type="log", tickmode="array", tickvals=[1, 10, 100],
+            title_standoff = 0
+        ),
+        hovermode='closest',
+        legend=dict(
+          orientation="h",
+          yanchor="top",
+          y=0.99,
+          xanchor="right",
+          x=0.995,
+          bgcolor="LightSteelBlue",
+          bordercolor="Black",
+          borderwidth=1,
+          # itemsizing = "constant",
+        ),
+        font=dict(
+          family="Courier New, monospace",
+          size=9,
+          color="black",
+        ),
+    )
+
+    fig.update_layout(layout)
+            
 
     fig.write_html(f"output/scale.html")
     fig.write_image(f"output/scale.pdf")
