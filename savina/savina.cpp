@@ -18,6 +18,8 @@ int main(const int argc, const char** argv) {
     savina.run<actor_benchmark::Logmap>(25000, 10, 3.64, 0.0025);
     savina.run<actor_benchmark::Concsll>(20, 8000, 1, 10);
 
+    savina.run<actor_benchmark::Nop>();
+
     savina.run<actor_benchmark::Big>(20000, 120);
     savina.run<actor_benchmark::Chameneos>(100, 200000);
     savina.run<actor_benchmark::Count>(1000000);
