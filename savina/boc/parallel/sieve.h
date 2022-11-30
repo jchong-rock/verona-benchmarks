@@ -53,7 +53,7 @@ namespace boc_benchmark
         {
           // We have found a prime
           // std::cout << "Prime: " << i << std::endl;
-          self->remove(i * 2, i);
+          self->remove(i * i, i);
         }
         self->iterate(i + 1);
       });
