@@ -1,6 +1,3 @@
-#include <memory>
-#include <debug/harness.h>
-#include <cpp/when.h>
 #include "util/bench.h"
 #include <random>
 #include <chrono>
@@ -20,6 +17,7 @@ struct CustomerFactory {
   uint64_t number_of_haircuts;
   uint64_t attempts;
   cown_ptr<WaitingRoom> room;
+  Rand random;
 
   CustomerFactory(uint64_t number_of_haircuts, cown_ptr<WaitingRoom>&& room):
     number_of_haircuts(number_of_haircuts), attempts(0), room(room) {}
@@ -42,6 +40,7 @@ struct Customer {
 
 struct Barber {
   uint64_t haircut_rate;
+  Rand random;
 
   Barber(uint64_t haircut_rate): haircut_rate(haircut_rate) {}
 
@@ -87,11 +86,12 @@ struct WaitingRoom {
   }
 };
 
-static uint64_t BusyWaiter(uint64_t wait) {
+SNMALLOC_SLOW_PATH
+static uint64_t BusyWaiter(uint64_t wait, Rand& random) {
   uint64_t x = 0;
 
   for (uint64_t i = 0; i < wait; ++i) {
-    Rand().next();
+    random.next();
     x++;
   }
 
@@ -101,7 +101,7 @@ static uint64_t BusyWaiter(uint64_t wait) {
 void Barber::enter(cown_ptr<Barber>& self, cown_ptr<Customer> customer, cown_ptr<WaitingRoom> room) {
   when(self) << [customer=move(customer), room=move(room)](acquired_cown<Barber> self)  mutable {
     Customer::sit_down(customer);
-    BusyWaiter(Rand(time_point_cast<nanoseconds>(system_clock::now()).time_since_epoch().count()).integer(self->haircut_rate) + 1000);
+    BusyWaiter(self->random.integer(self->haircut_rate) + 10, self->random);
     Customer::pay_and_leave(customer);
     WaitingRoom::next(room);
   };
@@ -130,7 +130,7 @@ void CustomerFactory::run(cown_ptr<CustomerFactory>&& self, uint64_t rate) {
     for (uint64_t i = 0; i < self->number_of_haircuts; ++i) {
       self->attempts++;
       WaitingRoom::enter(self->room, make_cown<Customer>(tag));
-      BusyWaiter(Rand(time_point_cast<nanoseconds>(system_clock::now()).time_since_epoch().count()).integer(rate) + 1000);
+      BusyWaiter(self->random.integer(rate) + 10, self->random);
     }
   };
 }
