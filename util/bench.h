@@ -153,7 +153,7 @@ struct BenchmarkHarness {
 
         sched.run();
 
-        auto duration = duration_cast<milliseconds>((high_resolution_clock::now() - start)).count();
+        double duration = (double)(duration_cast<microseconds>((high_resolution_clock::now() - start)).count()) / 1000;
         samples.add(duration);
 
         if (opt.has("--scale"))
