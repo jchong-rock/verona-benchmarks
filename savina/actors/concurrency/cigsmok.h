@@ -59,11 +59,8 @@ void Smoker::smoke(const cown_ptr<Smoker>& self, uint64_t period) {
   when(self) << [period](acquired_cown<Smoker> self)  mutable{
     Arbiter::started(self->arbiter);
 
-    // TODO: I don't think this is doing anything?
-    uint64_t test = 0;
-
     for (uint64_t i = 0; i < period; ++i) {
-      test++;
+      self->random.nextInt();
     }
   };
 }

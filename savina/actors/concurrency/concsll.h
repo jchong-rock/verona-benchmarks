@@ -44,8 +44,8 @@ struct Worker {
   SimpleRand random;
   uint64_t messages;
 
-  Worker(const cown_ptr<Master> master, uint64_t messages, uint64_t size, uint64_t write, const cown_ptr<SortedList> list):
-    master(move(master)), size(size), write(write), list(move(list)), random(messages + size + write), messages(messages) {}
+  Worker(uint64_t id, const cown_ptr<Master> master, uint64_t messages, uint64_t size, uint64_t write, const cown_ptr<SortedList> list):
+    master(move(master)), size(size), write(write), list(move(list)), random(messages + size + write + id), messages(messages) {}
 
   static void work(const cown_ptr<Worker>&, uint64_t value = 0);
 };
@@ -85,11 +85,11 @@ struct Master {
     const cown_ptr<Master> master = make_cown<Master>(workers, list);
 
     for (uint64_t i = 0; i < workers - 1; ++i) {
-      Worker::work(make_cown<Worker>(master, messages, size, write, list));
+      Worker::work(make_cown<Worker>(i, master, messages, size, write, list));
     }
 
     // assume workers is > 0
-    Worker::work(make_cown<Worker>(move(master), messages, size, write, move(list)));
+    Worker::work(make_cown<Worker>(workers - 1, move(master), messages, size, write, move(list)));
   }
 
   static void done(const cown_ptr<Master>& self) {
@@ -109,9 +109,9 @@ void Worker::work(const cown_ptr<Worker>& self, uint64_t value) {
       if (value2 < self->size) {
         SortedList::size(self->list, self.cown());
       } else if (value2 < (self->size + self->write)) {
-        SortedList::write(self->list, self.cown(), value2);
+        SortedList::write(self->list, self.cown(), self->random.nextLong());
       } else {
-        SortedList::contains(self->list, self.cown(), value2);
+        SortedList::contains(self->list, self.cown(), self->random.nextLong());
       }
     } else {
       Master::done(self->master);
