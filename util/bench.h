@@ -86,6 +86,7 @@ struct BenchmarkHarness {
       get_seed() = opt.is<size_t>("--seed", 123456);
 #endif
 
+#ifndef USE_SCHED_STATS
     if(!opt.has("--csv"))
     {
       std::cout << "BenchmarkHarness starting." << std::endl;
@@ -102,6 +103,8 @@ struct BenchmarkHarness {
 
       std::cout << std::endl;
     }
+#endif
+
     cores = opt.is<size_t>("--cores", 4);
 
 #ifdef USE_SYSTEMATIC_TESTING
@@ -127,11 +130,13 @@ struct BenchmarkHarness {
 //    detect_leaks = !opt.has("--allow_leaks");
     Scheduler::set_detect_leaks(detect_leaks);
 
+#ifndef USE_SCHED_STATS
     if (!opt.has("--scale"))
     {
       writer = opt.has("--csv") ? std::unique_ptr<Writer>{std::make_unique<CSVWriter>()} : std::make_unique<ConsoleWriter>();
       writer->writeHeader();
     }
+#endif
   }
 
   template<typename T, typename...Args>
@@ -149,6 +154,8 @@ struct BenchmarkHarness {
 
         high_resolution_clock::time_point start = high_resolution_clock::now();
 
+        SchedulerStats::get_tag() = benchmark.name().c_str();
+
         benchmark.run();
 
         sched.run();
@@ -162,15 +169,16 @@ struct BenchmarkHarness {
         if (detect_leaks)
           snmalloc::debug_check_empty<snmalloc::Alloc::Config>();
 
-  #ifdef USE_SYSTEMATIC_TESTING
+#ifdef USE_SYSTEMATIC_TESTING
         get_seed()++;
         printf("Seed: %zu\n", get_seed());
-  #endif
+#endif
       }
     }
     if (opt.has("--scale"))
       return;
-
+#ifndef USE_SCHED_STATS 
     writer->writeEntry(benchmark.name(), samples.mean(), samples.median(), samples.ref_err(), samples.stddev());
+#endif
   }
 };

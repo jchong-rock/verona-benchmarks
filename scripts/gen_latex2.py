@@ -45,6 +45,13 @@ def process(file, benchmarks):
 
   return map
 
+def process2(file):
+  map = {}
+  for row in file:
+    tag, benchmark, dump, steal,lifo,pause,unpause,cowns,b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15 = row
+    if benchmark != "Tag":
+      map[benchmark] = {"behaviours1": b1, "behaviours2": b2, "cowns": cowns}
+  return map
 
 if __name__ == '__main__':
     args = getopts()
@@ -109,20 +116,27 @@ if __name__ == '__main__':
     with open(output_directory + f"/boc_actor1.csv", 'r') as ba1,\
       open(output_directory + f"/boc_actor8.csv", 'r') as ba8,\
       open(output_directory + f"/boc_full1.csv", 'r') as bf1,\
-      open(output_directory + f"/boc_full8.csv", 'r')  as bf8:
+      open(output_directory + f"/boc_full8.csv", 'r')  as bf8,\
+      open(output_directory + f"/actor_stats.csv", 'r') as a_stats,\
+      open(output_directory + f"/boc_stats.csv", 'r') as b_stats:
       
       rba1 = csv.reader(ba1)
       rba8 = csv.reader(ba8)
       rbf1 = csv.reader(bf1)
       rbf8 = csv.reader(bf8)
-      
+      ra_stats  = csv.reader(a_stats)
+      rb_stats  = csv.reader(b_stats)
+
       benchmarks = set()
 
       map_ba1 = process(rba1, benchmarks)
       map_ba8 = process(rba8, benchmarks)
       map_bf1 = process(rbf1, benchmarks)
       map_bf8 = process(rbf8, benchmarks)
-      
+
+      map_a_stats = process2(ra_stats)
+      map_b_stats = process2(rb_stats)
+
       # caclculate set of benchmarks in map_bf1
       benchmarks = {k for k in benchmarks if k in map_bf1 and k != "Concurrent Dictionary"}
 #      benchmarks = {"Banking", "Dining Philosophers", "Fib", "Logistic Map Series", "Sleeping Barber"}
@@ -143,9 +157,19 @@ if __name__ == '__main__':
         print("&")
         print_entry(benchmark, map_ba8)
         print("&")
+        print(map_a_stats[benchmark]["cowns"])
+        print("&")
+        print(map_a_stats[benchmark]["behaviours1"])
+        print("&")
         print(loc_full[benchmark])
         print("&")
         print_entry(benchmark, map_bf1)
         print("&")
         print_entry(benchmark, map_bf8)
+        print("&")
+        print(map_b_stats[benchmark]["cowns"])
+        print("&")
+        print(map_b_stats[benchmark]["behaviours1"])
+        print("&")
+        print(map_b_stats[benchmark]["behaviours2"])
         print("\\\\")

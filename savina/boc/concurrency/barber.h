@@ -135,6 +135,7 @@ struct CustomerFactory {
   uint64_t number_of_haircuts;
   uint64_t attempts;
   cown_ptr<WaitingRoom> room;
+  Rand random;
 
   CustomerFactory(uint64_t number_of_haircuts, cown_ptr<WaitingRoom>&& room):
     number_of_haircuts(number_of_haircuts), attempts(0), room(move(room)) {}
@@ -157,6 +158,7 @@ struct Customer {
 struct Barber {
   uint64_t haircut_rate;
   bool busy;
+  Rand random;
 
   Barber(uint64_t haircut_rate): haircut_rate(haircut_rate) {}
 
@@ -164,11 +166,11 @@ struct Barber {
   static void wait(const cown_ptr<Barber>&);
 };
 
-static uint64_t BusyWaiter(uint64_t wait) {
+static uint64_t BusyWaiter(uint64_t wait, Rand& random) {
   uint64_t x = 0;
 
   for (uint64_t i = 0; i < wait; ++i) {
-    Rand().next();
+    random.next();
     x++;
   }
 
@@ -194,7 +196,7 @@ struct WaitingRoom {
 
           // barber->sleeping = false;
           customer->sit_down();
-          BusyWaiter(Rand(time_point_cast<nanoseconds>(system_clock::now()).time_since_epoch().count()).integer(barber->haircut_rate) + 10);
+          BusyWaiter(Rand(time_point_cast<nanoseconds>(system_clock::now()).time_since_epoch().count()).integer(barber->haircut_rate) + 10, barber->random);
           CustomerFactory::left(customer->factory, customer.cown());
 
           when(barber.cown(), wr) << [](acquired_cown<Barber> barber, acquired_cown<WaitingRoom> wr) {
@@ -231,7 +233,7 @@ void CustomerFactory::run(cown_ptr<CustomerFactory>&& self, uint64_t rate) {
     for (uint64_t i = 0; i < self->number_of_haircuts; ++i) {
       self->attempts++;
       WaitingRoom::enter(self->room, make_cown<Customer>(tag));
-      BusyWaiter(Rand(time_point_cast<nanoseconds>(system_clock::now()).time_since_epoch().count()).integer(rate) + 10);
+      BusyWaiter(Rand(time_point_cast<nanoseconds>(system_clock::now()).time_since_epoch().count()).integer(rate) + 10, self->random);
     }
   };
 }
