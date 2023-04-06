@@ -7,7 +7,7 @@ include(FetchContent)
 FetchContent_Declare(
   verona
   GIT_REPOSITORY https://github.com/microsoft/verona-rt
-  GIT_TAG        4c8bef6929b662763d2a98cb8462e953b02a97dd
+  GIT_TAG        19c01dff5e6abc60d8c56998c66fbfa8f2f9be81
   SOURCE_SUBDIR  src
 )
 
