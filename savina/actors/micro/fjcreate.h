@@ -19,9 +19,9 @@ struct ForkJoinMaster {
   static void done(const cown_ptr<ForkJoinMaster>&);
 };
 
-namespace ForkJoin {
+struct ForkJoin {
   static void make(const cown_ptr<ForkJoinMaster>& master, Token token) {
-    when() << [master]() mutable {
+    when(make_cown<ForkJoin>()) << [master](acquired_cown<ForkJoin>) mutable {
       double n = sin(double(37.2));
       double r = n * n;
       ForkJoinMaster::done(master);
