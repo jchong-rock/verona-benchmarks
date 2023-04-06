@@ -24,6 +24,7 @@ struct Account {
   static void debit(cown_ptr<Account>, cown_ptr<Account>, cown_ptr<Teller>, double);
   static void credit(cown_ptr<Account>, cown_ptr<Teller>, double, cown_ptr<Account>);
   static void reply(cown_ptr<Account>, cown_ptr<Teller>);
+  void unstash(cown_ptr<Account>);
 };
 
 struct DebitMessage: public StashToken {
@@ -91,10 +92,11 @@ struct Teller {
 };
 
 void Account::debit(cown_ptr<Account> self, cown_ptr<Account> account, cown_ptr<Teller> teller, double amount) {
-  when(self) << [account = std::move(account), teller = std::move(teller), amount](acquired_cown<Account> self) mutable {
+  when(self) << [tag = self, account = std::move(account), teller = std::move(teller), amount](acquired_cown<Account> self) mutable {
     if (!self->stash_mode) {
       self->balance += amount;
       Account::reply(std::move(account), std::move(teller));
+      self->unstash(tag);
     } else {
       self->stash.emplace_back(std::make_unique<DebitMessage>(std::move(account), std::move(teller), amount));
     }
@@ -113,15 +115,19 @@ void Account::credit(cown_ptr<Account> self, cown_ptr<Teller> teller, double amo
   };
 }
 
+void Account::unstash(cown_ptr<Account> tag) {
+  if(!stash.empty())
+  {
+    std::unique_ptr<StashToken> token = std::move(stash.front());
+    stash.pop_front();
+    token->requeue(tag);
+  }
+}
+
 void Account::reply(cown_ptr<Account> self, cown_ptr<Teller> teller) {
   when(self) << [tag=self, teller](acquired_cown<Account> self) mutable {
     Teller::reply(teller);
-    while(!self->stash.empty())
-    {
-      std::unique_ptr<StashToken> token = std::move(self->stash.front());
-      self->stash.pop_front();
-      token->requeue(tag);
-    }
+    self->unstash(tag);
     self->stash_mode = false;
   };
 }
