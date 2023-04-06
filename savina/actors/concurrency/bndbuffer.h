@@ -42,11 +42,11 @@ static double ItemProcessor(double current, uint64_t cost) {
     {
       for (uint64_t j = 0; j < 100; j++)
       {
-        result += std::log(((double)random.next()) + 0.01);
+        result += std::log((((double)random.next()) + 0.01));
       }
     }
   } else {
-    result += std::log(((double)random.next()) + 0.01);
+    result += std::log((((double)random.next())) + 0.01);
   }
 
   return result;
@@ -102,7 +102,7 @@ void Manager::make(uint64_t buffersize, uint64_t producers, uint64_t consumers, 
 }
 
 void Manager::complete() {
-  if (producer_count == 0 && availableConsumers.size() == max_consumers) {
+  if ((producer_count == 0) && (availableConsumers.size() == max_consumers)) {
     availableConsumers.clear();
     return;
   }
