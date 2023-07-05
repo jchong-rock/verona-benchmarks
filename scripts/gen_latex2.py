@@ -24,11 +24,11 @@ def print_entry(benchmark, map):
   if benchmark in map:
     bold = map[benchmark]["mean"] == map_min[benchmark]
     if bold:
-      print("{ \\bfseries ")
+      print("\\underline{ \\bfseries ")
     print(round_special(map[benchmark]["mean"], 1000))
-    print("$\\pm$", round_special(map[benchmark]["err"], 100))
     if bold:
       print("}")
+    print("&", round_special(map[benchmark]["err"], 100))
   else:
     print("-")
 

@@ -40,19 +40,23 @@ if __name__ == '__main__':
     output_directory = args.o
     if not os.path.exists(output_directory):
         os.mkdir(output_directory)
-    
-    #    run_pony(8, output_directory, args.repeats)
-    run_pony(4, output_directory, args.repeats)
-    run_pony(2, output_directory, args.repeats)
+
+    run_test(["./savina-stats", "--cores", "1", "--reps", "1", "--actor"], output_directory + f"/actor_stats.csv")
+    run_test(["./savina-stats", "--cores", "1", "--reps", "1", "--full"], output_directory + f"/boc_stats.csv")
+
+    run_test(["./savina", "--scale", "--csv", "--cores", "72", "--reps", "50"], output_directory + f"/banking_scale.csv")
+
+    run_pony(8, output_directory, args.repeats)
+#    run_pony(4, output_directory, args.repeats)
+#    run_pony(2, output_directory, args.repeats)
     run_pony(1, output_directory, args.repeats)
 
     run_boc_full(1, output_directory, args.repeats)
-    run_boc_full(2, output_directory, args.repeats)
-    run_boc_full(4, output_directory, args.repeats)
+#    run_boc_full(2, output_directory, args.repeats)
+#    run_boc_full(4, output_directory, args.repeats)
     run_boc_full(8, output_directory, args.repeats)
 
     run_boc_actor(1, output_directory, args.repeats)
-    run_boc_actor(2, output_directory, args.repeats)
-    run_boc_actor(4, output_directory, args.repeats)
+#    run_boc_actor(2, output_directory, args.repeats)
+#    run_boc_actor(4, output_directory, args.repeats)
     run_boc_actor(8, output_directory, args.repeats)
-    
