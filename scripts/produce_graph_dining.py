@@ -8,8 +8,13 @@ def getopts():
   parser = argparse.ArgumentParser(description='Plot results for throughput test.')
   parser.add_argument('--html', action="store_true", help="save as html")
   parser.add_argument('--svg', action="store_true", help="save as svg")
+  parser.add_argument("-o", default="results", help="output directory location")
+  parser.add_argument("-i", default="outputs", help="input directory location")
   args = parser.parse_args()
   return args
+
+input_directory = "outputs"
+output_directory = "results"
 
 def plot(infiles, legends, symbols, colors, as_html, as_svg):
     fontdict = dict(family="Courier New, monospace", size = 20, color = "black")
@@ -89,15 +94,15 @@ def plot(infiles, legends, symbols, colors, as_html, as_svg):
     ))
 
     if as_html:
-      fig.write_html("out.html")
+      fig.write_html(output_directory + "/dining_scale.html")
     elif as_svg:
-      fig.write_image("out.svg")
-      fig.write_image("out.svg")
+      fig.write_image(output_directory + "/dining_scale.svg")
+      fig.write_image(output_directory + "/dining_scale.svg")
     else:
       # this is pretty stupid, but we do it twice because the print has something
       # on screen the first time
-      fig.write_image("out.pdf")
-      fig.write_image("out.pdf")
+      fig.write_image(output_directory + "/dining_scale.pdf")
+      fig.write_image(output_directory + "/dining_scale.pdf")
 
 # This generates multiple graphs: each adding a new dataset to the previous datasets
 def plot_inc(infiles, legends, symbols, colors):
@@ -181,16 +186,16 @@ def plot_inc(infiles, legends, symbols, colors):
           line=dict(color = colors[len(colors) - 1], width=1),
         ))
 
-        fig.write_image(f"out-{take}.svg")
-        fig.write_image(f"out-{take}.svg")
+        fig.write_image(output_directory + f"/dining_scale-{take}.svg")
+        fig.write_image(output_directory + f"/dining_scale-{take}.svg")
 
 if __name__ == '__main__':
     args = getopts()
     files_to_plot = [
-      # "pthread_dining_opt_manual",
-      "pthread_dining_opt",
-      # "verona_dining_seq",
-      "verona_dining_opt",
+      # input_directory + "/pthread_dining_opt_manual",
+      input_directory + "/pthread_dining_opt",
+      # input_directory + "/verona_dining_seq",
+      input_directory + "/verona_dining_opt",
     ]
     files_to_plot = [ os.path.join("..", "results", f"{file}.csv") for file in files_to_plot ]
     symbols = [f"{symbol}-open" for symbol in ["triangle-up", "circle"]]

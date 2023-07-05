@@ -9,7 +9,7 @@ map_min = {}
 
 def getopts():
     parser = argparse.ArgumentParser(description='Gen latex from test run.')
-    parser.add_argument('-o', default='./output', help='output directory location')
+    parser.add_argument('-i', default='./output', help='input directory location')
     args = parser.parse_args()
     return args
 
@@ -86,7 +86,7 @@ if __name__ == '__main__':
     loc_actor = {}
     loc_full = {}
 
-    with open("cloc_raw.csv", "r") as file:    
+    with open(output_directory + "/cloc_raw.csv", "r") as file:    
       reader = csv.reader(file, delimiter=',')
 
       for row in reader:

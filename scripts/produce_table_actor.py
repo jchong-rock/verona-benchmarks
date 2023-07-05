@@ -9,7 +9,7 @@ map_min = {}
 
 def getopts():
     parser = argparse.ArgumentParser(description='Gen latex from test run.')
-    parser.add_argument('-o', default='./output', help='output directory location')
+    parser.add_argument('-i', default='./output', help='input directory location')
     args = parser.parse_args()
     return args
 
