@@ -17,13 +17,21 @@ RUN sudo mkdir artifact \
     && sudo chown $USERNAME artifact
 WORKDIR artifact
 
-# Build verona benchmarks
+# Build Verona Savina benchmarks
 RUN git clone https://github.com/ic-slurp/verona-benchmarks.git \
     && cd verona-benchmarks \
     && mkdir build \
     && cd build \
     && cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-12 -DCMAKE_CXX_COMPILER=clang++-12 .. \
     && ninja
+
+# Build Verona Runtime benchmark
+RUN git clone https://github.com/Microsoft/verona-rt.git \
+    && cd verona-rt \
+    && mkdir build \
+    && cd build \
+    && cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-12 -DCMAKE_CXX_COMPILER=clang++-12 .. \
+    && ninja test/perf-con-dining_phil
 
 # Install PonyUp
 RUN export SHELL=/bin/bash \
