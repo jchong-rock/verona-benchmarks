@@ -4,8 +4,10 @@ ARG USERNAME=verona
 # Install dependencies
 RUN apt update \
     && apt upgrade -y \
-    && DEBIAN_FRONTEND=noninteractive apt install -y cmake ninja-build llvm-12 clang-12 lld-12 git lsb-release curl sudo pip \
-    && pip install psutil plotly pandas
+    && DEBIAN_FRONTEND=noninteractive apt install -y cmake ninja-build llvm-12 clang-12 lld-12 git lsb-release curl sudo pip cloc
+
+# Install Python dependencies
+RUN pip install psutil plotly pandas kaleido
 
 # Create a non-root user
 RUN useradd -m $USERNAME \
@@ -48,7 +50,7 @@ RUN export CC=/usr/bin/clang-12 \
     && cd pony-savina \
     && git checkout boc \
     && cd savina-pony \
-    &&  $HOME/.local/share/ponyup/bin/ponyc
+    && $HOME/.local/share/ponyup/bin/ponyc
 
 ENV SHELL /bin/bash
 CMD /bin/bash
