@@ -55,10 +55,12 @@ if __name__ == '__main__':
         os.mkdir(output_directory)
 
     # Calculate stats of the benchmarks (cown/behaviour counts)
+    print("Calculating stats")
     run_test([verona_path + "/savina-stats", "--cores", "1", "--reps", "1", "--actor"], output_directory + f"/actor_stats.csv")
     run_test([verona_path + "/savina-stats", "--cores", "1", "--reps", "1", "--full"], output_directory + f"/boc_stats.csv")
 
     # Run the banking scale benchmark
+    print("Running banking scale")
     run_test([verona_path + "/savina", "--scale", "--csv", "--cores", f"{os.cpu_count()}", "--reps", "50"], output_directory + f"/banking_scale.csv")
 
     run_pony(1, output_directory, args.repeats)

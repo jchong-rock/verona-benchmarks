@@ -52,5 +52,7 @@ RUN export CC=/usr/bin/clang-12 \
     && cd savina-pony \
     && $HOME/.local/share/ponyup/bin/ponyc
 
+COPY README.md README.md
+
 ENV SHELL /bin/bash
 CMD /bin/bash

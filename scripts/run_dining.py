@@ -13,6 +13,7 @@ def getopts():
                         help='number of times to repeat the runs')
     parser.add_argument('-o', default='output', help='outfile location')
     parser.add_argument("--verona-path", default=".", help="path containing verona dining philosophers binary")
+    parser.add_argument("--fast", type=bool, default=False, help="run the fast version of the benchmark")
     args = parser.parse_args()
     return args
 
@@ -37,8 +38,10 @@ if __name__ == '__main__':
     if not os.path.exists(output_directory):
         os.mkdir(output_directory)
 
-    print("Running dining philosophers")
-    print("This will take a while... There is 50 seconds of busy work per run.")
+    if not args.fast:
+        print("Running dining philosophers")
+        print("This will take a while... There is 50 seconds of busy work per run.")
+        print("Consider adding --fast if you are in a rush.")
 
     verona_path = args.verona_path
     # Dump it as a csv file so we can use it for pgfplots
@@ -53,7 +56,10 @@ if __name__ == '__main__':
         csv_writer_pdo = make_csv(pdo)
         csv_writer_vdo200 = make_csv(vdo200)
         philosophers = 100
-        hunger = 500
+        if args.fast:
+            hunger = 50
+        else:
+            hunger = 500
         exe = verona_path + '/perf-con-dining_phil'
         for exp in range(args.repeats):
             cores = range(1, os.cpu_count() + 1)
