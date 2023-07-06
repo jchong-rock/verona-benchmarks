@@ -59,7 +59,7 @@ if __name__ == '__main__':
     run_test([verona_path + "/savina-stats", "--cores", "1", "--reps", "1", "--full"], output_directory + f"/boc_stats.csv")
 
     # Run the banking scale benchmark
-    run_test([verona_path + "/savina", "--scale", "--csv", "--cores", "72", "--reps", "50"], output_directory + f"/banking_scale.csv")
+    run_test([verona_path + "/savina", "--scale", "--csv", "--cores", f"{os.cpu_count()}", "--reps", "50"], output_directory + f"/banking_scale.csv")
 
     run_pony(1, output_directory, args.repeats)
     run_pony(8, output_directory, args.repeats)
