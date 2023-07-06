@@ -56,7 +56,7 @@ def process2(file):
 if __name__ == '__main__':
     args = getopts()
 
-    output_directory = args.o
+    output_directory = args.i
 
 def run_cloc():
     # Not currently working so manually run cloc:

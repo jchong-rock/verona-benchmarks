@@ -3,6 +3,7 @@ import os
 import time
 import csv
 import argparse
+import psutil
 
 # This will measure setup and teardown time
 
@@ -34,6 +35,11 @@ def run_boc_full(cores, output_directory, repeats):
     run_test([verona_path + "/savina", "--full", "--csv", "--cores", f'{cores}', "--reps", f'{repeats}'], output_directory + f"/boc_full{cores}.csv")
 
 def run_pony(cores, output_directory, repeats):
+    # Only run if we jave enough cores
+    physical_cores = psutil.cpu_count(logical=False)
+    if physical_cores < cores:
+        print(f"Skipping Pony on {cores} cores as we only have {physical_cores} physicals cores")
+        return
     print(f"Running Pony on {cores} core")
     # run the pony benchmark
     run_test([pony_path + "/savina-pony", "--parseable", "--ponymaxthreads", f"{cores}", "--reps", f'{repeats}'], output_directory + f"/pony{cores}.csv")
@@ -53,12 +59,12 @@ if __name__ == '__main__':
     run_test([verona_path + "/savina-stats", "--cores", "1", "--reps", "1", "--full"], output_directory + f"/boc_stats.csv")
 
     # Run the banking scale benchmark
-    run_test([verona_path + "/savina", "--scale", "--csv", "--cores", "72", "--reps", "50"], output_directory + f"/banking_scale.csv")
+#    run_test([verona_path + "/savina", "--scale", "--csv", "--cores", "72", "--reps", "50"], output_directory + f"/banking_scale.csv")
 
+    run_pony(8, output_directory, args.repeats)
     run_pony(1, output_directory, args.repeats)
 #    run_pony(2, output_directory, args.repeats)
 #    run_pony(4, output_directory, args.repeats)
-    run_pony(8, output_directory, args.repeats)
 
     run_boc_full(1, output_directory, args.repeats)
 #    run_boc_full(2, output_directory, args.repeats)

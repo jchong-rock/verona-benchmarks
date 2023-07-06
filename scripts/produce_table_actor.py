@@ -33,77 +33,72 @@ def print_entry(benchmark, map, baseline=None):
       print(" & (", round_special(math.log(map[benchmark]["mean"] / baseline, 10), 10), ") ", end='', sep='')
     print()
   else:
-    print("-")
-
+    print("- &", end='')
+    if baseline is not None:
+      print(" & ", end='')
+    print()
+  
 def process(file, benchmarks):
-  map = {}
+  if (not os.path.isfile(file)):
+    print(f"File {file} does not exist.")
+    return dict()
 
-  for row in file:
-    benchmark, mean, median, err = row
-    if benchmark != "benchmark":
-      benchmarks.add(benchmark)
-      map[benchmark] = {"mean": float(mean), "median": float(median), "err": float(err)} 
-      if benchmark not in map_min or map_min[benchmark] > float(mean):
-        map_min[benchmark] = float(mean)
+  map = {}
+  with open(file, 'r') as f:
+    for row in csv.reader(f):
+      benchmark, mean, median, err = row
+      if benchmark != "benchmark":
+        benchmarks.add(benchmark)
+        map[benchmark] = {"mean": float(mean), "median": float(median), "err": float(err)} 
+        if benchmark not in map_min or map_min[benchmark] > float(mean):
+          map_min[benchmark] = float(mean)
 
   return map
 
 def process2(file):
-  map = {}
-  for row in file:
-    tag, benchmark, dump, steal,lifo,pause,unpause,cowns,b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15 = row
-    if benchmark != "Tag":
-      map[benchmark] = {"behaviours": b1, "cowns": cowns}
-  return map
+  with open(file, 'r') as f:
+    map = {}
+    for row in csv.reader(f):
+      tag, benchmark, dump, steal,lifo,pause,unpause,cowns,b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15 = row
+      if benchmark != "Tag":
+        map[benchmark] = {"behaviours": b1, "cowns": cowns}
+    return map
 
 if __name__ == '__main__':
     args = getopts()
 
-    output_directory = args.o
+    output_directory = args.i
 
-    # Dump it as a csv file so we can use it for pgfplots
-    with open(output_directory + f"/boc_actor1.csv", 'r') as ba1,\
-      open(output_directory + f"/boc_actor8.csv", 'r') as ba8,\
-      open(output_directory + f"/pony1.csv", 'r')      as p1,\
-      open(output_directory + f"/pony8.csv", 'r') as p8,\
-      open(output_directory + f"/actor_stats.csv", 'r') as a_stats:
+    benchmarks = set()
 
-      rba1 = csv.reader(ba1)
-      rba8 = csv.reader(ba8)
-      rp1  = csv.reader(p1)
-      rp8  = csv.reader(p8)
-      ra_stats  = csv.reader(a_stats)
+    map_ba1 = process(output_directory + f"/boc_actor1.csv", benchmarks)
+    map_ba8 = process(output_directory + f"/boc_actor8.csv", benchmarks)
+    map_p1  = process(output_directory + f"/pony1.csv", benchmarks)
+    map_p8  = process(output_directory + f"/pony8.csv", benchmarks)
+    map_stats = process2(output_directory + f"/actor_stats.csv")
 
-      benchmarks = set()
-
-      map_ba1 = process(rba1, benchmarks)
-      map_ba8 = process(rba8, benchmarks)
-      map_p1  = process(rp1, benchmarks)
-      map_p8  = process(rp8, benchmarks)
-      map_stats = process2(ra_stats)
-
-      for benchmark in sorted(benchmarks):
-        if benchmark == "Banking 2PC":
-          continue
-        if benchmark == "Recursive Matrix Multiplication":
-          print("Matrix Mult")
+    for benchmark in sorted(benchmarks):
+      if benchmark == "Banking 2PC":
+        continue
+      if benchmark == "Recursive Matrix Multiplication":
+        print("Matrix Mult")
+      else:
+        if benchmark == "Concurrent Sorted Linked-List":
+          print("Concurrent Sorted List")
         else:
-          if benchmark == "Concurrent Sorted Linked-List":
-            print("Concurrent Sorted List")
-          else:
-            print(benchmark)
-        benchmark = benchmark
-        print("&")
-        print_entry(benchmark, map_p1)
-        print("&")
-        print_entry(benchmark, map_p8, map_p1[benchmark]["mean"])
-        print("&")
-        print_entry(benchmark, map_ba1, map_p1[benchmark]["mean"])
-        print("&")
-        print_entry(benchmark, map_ba8, map_p1[benchmark]["mean"])
-        print("&")
-        print(map_stats[benchmark]["cowns"])
-        print("&")
-        print(map_stats[benchmark]["behaviours"])
-        print("\\\\")
-        
+          print(benchmark)
+      benchmark = benchmark
+      print("&")
+      print_entry(benchmark, map_p1)
+      print("&")
+      print_entry(benchmark, map_p8, map_p1[benchmark]["mean"])
+      print("&")
+      print_entry(benchmark, map_ba1, map_p1[benchmark]["mean"])
+      print("&")
+      print_entry(benchmark, map_ba8, map_p1[benchmark]["mean"])
+      print("&")
+      print(map_stats[benchmark]["cowns"])
+      print("&")
+      print(map_stats[benchmark]["behaviours"])
+      print("\\\\")
+      

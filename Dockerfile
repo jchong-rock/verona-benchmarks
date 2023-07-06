@@ -5,6 +5,7 @@ ARG USERNAME=verona
 RUN apt update \
     && apt upgrade -y \
     && DEBIAN_FRONTEND=noninteractive apt install -y cmake ninja-build llvm-12 clang-12 lld-12 git lsb-release curl sudo
+    && pip install psutil
 
 # Create a non-root user
 RUN useradd -m $USERNAME \
