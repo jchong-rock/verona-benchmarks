@@ -9,7 +9,7 @@ map_min = {}
 
 def getopts():
     parser = argparse.ArgumentParser(description='Gen latex from test run.')
-    parser.add_argument('-o', default='./output', help='output directory location')
+    parser.add_argument('-i', default='./output', help='input directory location')
     args = parser.parse_args()
     return args
 
@@ -24,11 +24,11 @@ def print_entry(benchmark, map):
   if benchmark in map:
     bold = map[benchmark]["mean"] == map_min[benchmark]
     if bold:
-      print("{ \\bfseries ")
+      print("\\underline{ \\bfseries ")
     print(round_special(map[benchmark]["mean"], 1000))
-    print("$\\pm$", round_special(map[benchmark]["err"], 100))
     if bold:
       print("}")
+    print("&", round_special(map[benchmark]["err"], 100))
   else:
     print("-")
 
@@ -56,7 +56,7 @@ def process2(file):
 if __name__ == '__main__':
     args = getopts()
 
-    output_directory = args.o
+    output_directory = args.i
 
 def run_cloc():
     # Not currently working so manually run cloc:
@@ -86,7 +86,7 @@ if __name__ == '__main__':
     loc_actor = {}
     loc_full = {}
 
-    with open("cloc_raw.csv", "r") as file:    
+    with open(output_directory + "/cloc_raw.csv", "r") as file:    
       reader = csv.reader(file, delimiter=',')
 
       for row in reader:
