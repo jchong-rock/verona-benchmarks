@@ -10,11 +10,13 @@ def getopts():
   parser.add_argument('--svg', action="store_true", help="save as svg")
   parser.add_argument("-o", default="results", help="output directory location")
   parser.add_argument("-i", default="outputs", help="input directory location")
+  parser.add_argument("--fast", action='store_true', help="run the fast version of the benchmark")
   args = parser.parse_args()
   return args
 
 input_directory = "outputs"
 output_directory = "results"
+fast = False
 
 def plot(infiles, legends, symbols, colors, as_html, as_svg):
     fontdict = dict(family="Courier New, monospace", size = 20, color = "black")
@@ -83,7 +85,11 @@ def plot(infiles, legends, symbols, colors, as_html, as_svg):
           #     showlegend=False
           #   ))
 
-    ideal = [ (cores+1, float(50) / min(cores + 1, 50)) for cores in range(72)]
+    if fast:
+      work = float(5)
+    else:
+      work = float(50)
+    ideal = [ (cores+1, work / min(cores + 1, 50)) for cores in range(72)]
     (cores, times) = list(zip(*ideal))
     fig.add_trace(go.Scatter(
       x = cores,
@@ -193,6 +199,7 @@ if __name__ == '__main__':
     args = getopts()
     input_directory = args.i
     output_directory = args.o
+    fast = args.fast
     if not os.path.exists(output_directory):
         os.mkdir(output_directory)
 

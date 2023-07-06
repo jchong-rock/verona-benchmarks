@@ -31,7 +31,7 @@ To run the dining philosophers benchmark for both Verona and std::lock, run the 
 ```
 python3 verona-benchmarks/scripts/run_dining.py -o outputs \
   --verona-path verona-rt/build/test \
-  --repeats 2
+  --repeats 2 \
   --fast
 ```
 The `--fast` option runs the benchmarks with fewer iterations, to make it faster to run.  To get more accurate results as used in teh paper, remove this option.
@@ -68,4 +68,10 @@ To generate the graphs, run the following commands:
 ```
 python3 verona-benchmarks/scripts/produce_graph_dining.py -i $RESULTS_DIR -o outputs
 python3 verona-benchmarks/scripts/produce_graph_banking_scale.py -i $RESULTS_DIR -o outputs
+```
+
+
+Note that if you have used `--fast` on the `run_dining.py` script, you will need to run the following command to generate the graph for the dining philosophers benchmark:
+```
+python3 verona-benchmarks/scripts/produce_graph_dining.py -i $RESULTS_DIR -o outputs --fast
 ```

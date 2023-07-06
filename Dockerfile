@@ -23,8 +23,8 @@ WORKDIR artifact
 # Build Verona Savina benchmarks
 RUN git clone https://github.com/ic-slurp/verona-benchmarks.git \
     && cd verona-benchmarks \
-    && git checkout artifact \
     && mkdir build \
+    && git checkout artifact \
     && cd build \
     && cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-12 -DCMAKE_CXX_COMPILER=clang++-12 .. \
     && ninja
