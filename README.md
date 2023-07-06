@@ -31,7 +31,7 @@ To run the dining philosophers benchmark for both Verona and std::lock, run the 
 ```
 python3 verona-benchmarks/scripts/run_dining.py -o outputs \
   --verona-path verona-rt/build/test \
-  --repeats 2
+  --repeats 2 \
   --fast
 ```
 The `--fast` option runs the benchmarks with fewer iterations, to make it faster to run.  To get more accurate results as used in teh paper, remove this option.

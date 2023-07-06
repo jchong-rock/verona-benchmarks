@@ -13,7 +13,7 @@ def getopts():
                         help='number of times to repeat the runs')
     parser.add_argument('-o', default='output', help='outfile location')
     parser.add_argument("--verona-path", default=".", help="path containing verona dining philosophers binary")
-    parser.add_argument("--fast", type=bool, default=False, help="run the fast version of the benchmark")
+    parser.add_argument("--fast", action='store_true', help="run the fast version of the benchmark")
     args = parser.parse_args()
     return args
 
