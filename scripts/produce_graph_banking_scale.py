@@ -16,7 +16,8 @@ if __name__ == '__main__':
   args = getopts()
   input_directory = args.i
   output_directory = args.o
-
+  if not os.path.exists(output_directory):
+      os.mkdir(output_directory)
   verona_results=input_directory + "/banking_scale.csv"
   with open(verona_results, newline='') as csvfile:
     reader = csv.reader(csvfile, delimiter=',')

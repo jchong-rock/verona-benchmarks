@@ -191,13 +191,17 @@ def plot_inc(infiles, legends, symbols, colors):
 
 if __name__ == '__main__':
     args = getopts()
+    input_directory = args.i
+    output_directory = args.o
+    if not os.path.exists(output_directory):
+        os.mkdir(output_directory)
+
     files_to_plot = [
-      # input_directory + "/pthread_dining_opt_manual",
-      input_directory + "/pthread_dining_opt",
-      # input_directory + "/verona_dining_seq",
-      input_directory + "/verona_dining_opt",
+      # input_directory + "/pthread_dining_opt_manual.csv",
+      input_directory + "/pthread_dining_opt.csv",
+      # input_directory + "/verona_dining_seq.csv",
+      input_directory + "/verona_dining_opt.csv",
     ]
-    files_to_plot = [ os.path.join("..", "results", f"{file}.csv") for file in files_to_plot ]
     symbols = [f"{symbol}-open" for symbol in ["triangle-up", "circle"]]
     colors = list(px.colors.qualitative.D3)
     colors = [colors[1], colors[4], colors[2]] # i like ideal to be green

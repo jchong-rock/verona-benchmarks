@@ -37,6 +37,9 @@ if __name__ == '__main__':
     if not os.path.exists(output_directory):
         os.mkdir(output_directory)
 
+    print("Running dining philosophers")
+    print("This will take a while... There is 50 seconds of busy work per run.")
+
     verona_path = args.verona_path
     # Dump it as a csv file so we can use it for pgfplots
     with open(output_directory + '/verona_dining_opt.csv', 'w') as vdo,\
