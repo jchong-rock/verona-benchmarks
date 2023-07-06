@@ -11,7 +11,7 @@ struct Nop: public ActorBenchmark {
 
   void run() { }
 
-  std::string name() { return "Nop"; }
+  inline static const std::string name = "Nop";
 
 };
 

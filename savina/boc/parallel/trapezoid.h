@@ -102,7 +102,7 @@ struct Trapezoid: public BocBenchmark {
 
   void run() { trapezoid::Master::create(workers, left, right, precision); }
 
-  std::string name() { return "Trapezoid"; }
+  inline static const std::string name = "Trapezoid";
 };
 
 };

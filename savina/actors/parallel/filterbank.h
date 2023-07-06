@@ -308,7 +308,7 @@ struct FilterBank: public ActorBenchmark {
     Producer::next(producer, move(source));
   }
 
-  std::string name() { return "Filterbank"; }
+  inline static const std::string name = "Filterbank";
 };
 
 };

@@ -70,7 +70,7 @@ struct Fjthrput: public ActorBenchmark {
 
   void run() { fjthrput::FjthrMaster::make(messages, actors, channels, priorities); }
 
-  std::string name() { return "Fork-Join Throughput"; }
+  inline static const std::string name = "Fork-Join Throughput";
 };
 
 };

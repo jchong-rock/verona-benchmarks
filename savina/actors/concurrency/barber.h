@@ -157,7 +157,7 @@ struct SleepingBarber: public ActorBenchmark {
     barber::CustomerFactory::run(make_cown<barber::CustomerFactory>(haircuts, make_cown<barber::WaitingRoom>(room, make_cown<barber::Barber>(cut))), production);
   }
 
-  std::string name() { return "Sleeping Barber"; }
+  inline static const std::string name = "Sleeping Barber";
 };
 
 };

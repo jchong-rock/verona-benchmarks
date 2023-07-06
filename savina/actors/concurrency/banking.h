@@ -138,6 +138,7 @@ struct Banking: public ActorBenchmark {
   uint64_t accounts;
   uint64_t transactions;
   double initial;
+  inline static const std::string name = "Banking";
 
   Banking(uint64_t accounts, uint64_t transactions): accounts(accounts), transactions(transactions) {
     initial = DBL_MAX / float(accounts * transactions);
@@ -147,8 +148,6 @@ struct Banking: public ActorBenchmark {
     auto seed = BenchmarkHarness::get_seed();
     banking::Teller::spawn_transactions(make_cown<banking::Teller>(initial, accounts, transactions, seed));
   }
-
-  std::string name() { return "Banking"; }
 };
 
 };

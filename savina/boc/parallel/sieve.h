@@ -89,7 +89,7 @@ namespace boc_benchmark
       };
     }
 
-    std::string name() { return "Sieve of Eratosthenes"; }
+    inline static const std::string name = "Sieve of Eratosthenes";
   };
 
 }

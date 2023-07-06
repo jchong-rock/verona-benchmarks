@@ -329,7 +329,7 @@ struct BndBuffer: public BocBenchmark {
     Manager::make_manager(buffersize, producers, consumers, items, producercosts, consumercosts);
   }
 
-  std::string name() { return "Bounded Buffer"; }
+  inline static const std::string name = "Bounded Buffer";
 };
 
 #endif
@@ -350,7 +350,7 @@ struct BndBuffer: public BocBenchmark {
     bndbuffer::Manager::make_manager(buffersize, producers, consumers, items, producercosts, consumercosts);
   }
 
-  std::string name() { return "Bounded Buffer"; }
+  inline static const std::string name = "Bounded Buffer";
 };
 
 };

@@ -171,7 +171,7 @@ struct BndBuffer: public ActorBenchmark {
     bndbuffer::Manager::make(buffersize, producers, consumers, items, producercosts, consumercosts);
   }
 
-  std::string name() { return "Bounded Buffer"; }
+  inline static const std::string name = "Bounded Buffer";
 };
 
 };

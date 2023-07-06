@@ -74,7 +74,7 @@ struct DiningPhilosophers: public BocBenchmark {
     Philosopher::eat(make_cown<Philosopher>(philosophers - 1, rounds, move(prev), move(first), move(table)));
   }
 
-  std::string name() { return "Dining Philosophers"; }
+  inline static const std::string name = "Dining Philosophers";
 };
 
 };

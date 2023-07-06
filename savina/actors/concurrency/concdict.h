@@ -103,7 +103,7 @@ struct Concdict: ActorBenchmark {
     Master::make(workers, messages, percentage);
   }
 
-  std::string name() { return "Concurrent Dictionary"; }
+  inline static const std::string name = "Concurrent Dictionary";
 
 };
 

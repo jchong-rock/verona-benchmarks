@@ -40,7 +40,7 @@ struct Count: BocBenchmark {
 
   void run() { count::Producer::make(make_cown<count::Counter>(), messages); }
 
-  std::string name() { return "Count"; }
+  inline static const std::string name = "Count";
 
 };
 

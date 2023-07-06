@@ -136,7 +136,7 @@ struct Radixsort: public ActorBenchmark {
     }
   }
 
-  std::string name() { return "Radixsort"; }
+  inline static const std::string name = "Radixsort";
 };
 
 };

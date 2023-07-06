@@ -12,16 +12,20 @@ template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 struct AsyncBenchmark {
   virtual void run()=0;
-  virtual std::string name()=0;
   virtual std::string paradigm()=0;
   virtual ~AsyncBenchmark() {}
 };
 
-struct BocBenchmark: public AsyncBenchmark {
+struct AsyncBenchmarkBase: AsyncBenchmark {
+public:
+  static const inline std::string name;
+};
+
+struct BocBenchmark: public AsyncBenchmarkBase {
   std::string paradigm() { return "boc"; }
 };
 
-struct ActorBenchmark: public AsyncBenchmark {
+struct ActorBenchmark: public AsyncBenchmarkBase {
   std::string paradigm() { return "actor"; }
 };
 
@@ -154,7 +158,7 @@ struct BenchmarkHarness {
 
         high_resolution_clock::time_point start = high_resolution_clock::now();
 
-        SchedulerStats::get_tag() = benchmark.name().c_str();
+        SchedulerStats::get_tag() = benchmark.name.c_str();
 
         benchmark.run();
 
@@ -164,7 +168,7 @@ struct BenchmarkHarness {
         samples.add(duration);
 
         if (opt.has("--scale"))
-          std::cout << benchmark.paradigm() << "," << c << "," << benchmark.name() << ", " << duration << std::endl;
+          std::cout << benchmark.paradigm() << "," << c << "," << benchmark.name << ", " << duration << std::endl;
 
         if (detect_leaks)
           snmalloc::debug_check_empty<snmalloc::Alloc::Config>();
@@ -178,7 +182,7 @@ struct BenchmarkHarness {
     if (opt.has("--scale"))
       return;
 #ifndef USE_SCHED_STATS 
-    writer->writeEntry(benchmark.name(), samples.mean(), samples.median(), samples.ref_err(), samples.stddev());
+    writer->writeEntry(benchmark.name, samples.mean(), samples.median(), samples.ref_err(), samples.stddev());
 #endif
   }
 };

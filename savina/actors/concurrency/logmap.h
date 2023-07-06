@@ -161,7 +161,7 @@ struct Logmap: public ActorBenchmark {
     LogmapMaster::start(LogmapMaster::make(terms, series, rate, increment));
   }
 
-  std::string name() { return "Logistic Map Series"; }
+  inline static const std::string name = "Logistic Map Series";
 
 };
 

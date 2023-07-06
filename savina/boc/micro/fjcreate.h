@@ -52,7 +52,7 @@ struct Fjcreate: public BocBenchmark {
 
   void run() { fjcreate::ForkJoinMaster::make(workers); }
 
-  std::string name() { return "Fork-Join Create"; }
+  inline static const std::string name = "Fork-Join Create";
 };
 
 };

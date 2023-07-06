@@ -54,7 +54,7 @@ struct PingPong: public ActorBenchmark {
 
   void run() { pingpong::Ping::make(pings, make_cown<pingpong::Pong>()); }
 
-  std::string name() { return "Ping Pong"; }
+  inline static const std::string name = "Ping Pong";
 };
 
 };

@@ -112,7 +112,7 @@ struct Quicksort: public BocBenchmark {
     // };
   }
 
-  std::string name() { return "Quicksort"; }
+  inline static const std::string name = "Quicksort";
 };
 
 };

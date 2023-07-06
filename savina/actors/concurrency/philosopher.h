@@ -113,7 +113,7 @@ struct DiningPhilosophers: public ActorBenchmark {
     }
   }
 
-  std::string name() { return "Dining Philosophers"; }
+  inline static const std::string name = "Dining Philosophers";
 };
 
 };

@@ -103,7 +103,7 @@ struct Big: ActorBenchmark {
     big::BigMaster::make(pings, actors);
   }
 
-  std::string name() { return "Big"; }
+  inline static const std::string name = "Big";
 };
 
 };

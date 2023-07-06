@@ -79,7 +79,7 @@ struct Cigsmok: public ActorBenchmark {
     cigsmok::Arbiter::notify_smoker(std::move(arbiter));
   }
 
-  std::string name() { return "Cigarette Smokers"; }
+  inline static const std::string name = "Cigarette Smokers";
 };
 
 };

@@ -65,7 +65,7 @@ struct Fib: public ActorBenchmark {
 
   void run() { fib::Fibonacci::root(index); }
 
-  std::string name() { return "Fib"; }
+  inline static const std::string name = "Fib";
 
 };
 

@@ -107,7 +107,7 @@ struct Chameneos: public BocBenchmark {
 
   void run() { chameneos::Mall::make(meetings, chameneos); }
 
-  std::string name() { return "Chameneos"; }
+  inline static const std::string name = "Chameneos";
 };
 
 };

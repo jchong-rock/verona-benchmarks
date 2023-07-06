@@ -135,7 +135,7 @@ struct Concsll: public ActorBenchmark {
     concsll::Master::make(workers, messages, size, write);
   }
 
-  std::string name() { return "Concurrent Sorted Linked-List"; }
+  inline static const std::string name = "Concurrent Sorted Linked-List";
 };
 
 

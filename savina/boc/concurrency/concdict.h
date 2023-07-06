@@ -100,7 +100,7 @@ struct Concdict: BocBenchmark {
     concdict::Master::make(workers, messages, percentage);
   }
 
-  std::string name() { return "Concurrent Dictionary"; }
+  inline static const std::string name = "Concurrent Dictionary";
 };
 
 };

@@ -102,7 +102,7 @@ struct Banking: public BocBenchmark {
     Teller::spawn_transactions(make_cown<Teller>(initial, accounts, transactions, busy_wait));
   }
 
-  std::string name() { return "Banking"; }
+  inline static const std::string name = "Banking";
 };
 
 

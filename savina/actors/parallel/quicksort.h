@@ -160,7 +160,7 @@ struct Quicksort: public ActorBenchmark {
     Sorter::sort(make_cown<Sorter>(Position::Initial, threshold, dataset), move(data));
   }
 
-  std::string name() { return "Quicksort"; }
+  inline static const std::string name = "Quicksort";
 };
 
 };

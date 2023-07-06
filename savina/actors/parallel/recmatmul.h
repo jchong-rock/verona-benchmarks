@@ -193,7 +193,7 @@ struct Recmatmul: public ActorBenchmark {
     recmatmul::Master::make(workers, length, threshold);
   }
 
-  std::string name() { return "Recursive Matrix Multiplication"; }
+  inline static const std::string name = "Recursive Matrix Multiplication";
 };
 
 };

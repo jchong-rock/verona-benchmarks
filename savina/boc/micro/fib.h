@@ -34,7 +34,7 @@ struct Fib: public BocBenchmark {
 
   void run() { fib::Fibonacci::compute(index); }
 
-  std::string name() { return "Fib"; }
+  inline static const std::string name = "Fib";
 
 };
 

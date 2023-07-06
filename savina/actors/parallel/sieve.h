@@ -98,7 +98,7 @@ struct Sieve: public ActorBenchmark {
     NumberProducer::create(size, make_cown<PrimeFilter>(buffersize));
   }
 
-  std::string name() { return "Sieve of Eratosthenes"; }
+  inline static const std::string name = "Sieve of Eratosthenes";
 };
 
 };

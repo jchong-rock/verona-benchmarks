@@ -60,7 +60,7 @@ struct ThreadRing: public ActorBenchmark {
     }
   }
 
-  std::string name() { return "Thread Ring"; }
+  inline static const std::string name = "Thread Ring";
 };
 
 };

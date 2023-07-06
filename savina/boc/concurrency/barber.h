@@ -258,7 +258,7 @@ struct SleepingBarber: public BocBenchmark {
     CustomerFactory::run(make_cown<CustomerFactory>(haircuts, make_cown<WaitingRoom>(room, make_cown<Barber>(cut))), production);
   }
 
-  std::string name() { return "Sleeping Barber"; }
+  inline static const std::string name = "Sleeping Barber";
 };
 
 };
