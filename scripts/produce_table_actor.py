@@ -103,6 +103,18 @@ if __name__ == '__main__':
       'Trapezoid': 'trapezoid'
     }
 
+    abbreviations = {
+      'Cigarette Smokers': 'Cig Smokers',
+      'Concurrent Dictionary': 'Conc Dict',
+      'Concurrent Sorted Linked-List': 'Conc Sorted List',
+      'Dining Philosophers': 'Dining Phils',
+      'Recursive Matrix Multiplication': 'Matrix Mul',
+      'Sieve of Eratosthenes': 'Sieve',
+      'Fork-Join Create': 'FJ Create',
+      'Fork-Join Throughput': 'FJ Throughput',
+      'Logistic Map Series': 'Map Series',
+    }
+
     filebenchmap = {v: k for k, v in benchfilemap.items()}
 
     loc_pony = {}
@@ -148,13 +160,10 @@ if __name__ == '__main__':
     for benchmark in sorted(benchmarks):
       if benchmark == "Banking 2PC":
         continue
-      if benchmark == "Recursive Matrix Multiplication":
-        print("Matrix Mult")
+      if benchmark in abbreviations:
+        print(abbreviations[benchmark])
       else:
-        if benchmark == "Concurrent Sorted Linked-List":
-          print("Concurrent Sorted List")
-        else:
-          print(benchmark)
+        print(benchmark)
       benchmark = benchmark
       print("&")
       print(loc_pony[benchmark])

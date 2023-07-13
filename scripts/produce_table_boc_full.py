@@ -3,7 +3,7 @@ import os
 import time
 import csv
 import argparse
-
+import math
 
 map_min = {}
 
@@ -80,6 +80,19 @@ if __name__ == '__main__':
       'Sleeping Barber': 'concurrency/barber.h',
       'Trapezoid': 'parallel/trapezoid.h'}
 
+    # Here for consistency between tables
+    abbreviations = {
+      'Cigarette Smokers': 'Cig Smokers',
+      'Concurrent Dictionary': 'Conc Dict',
+      'Concurrent Sorted Linked-List': 'Conc Sorted List',
+      'Dining Philosophers': 'Dining Phils',
+      'Recursive Matrix Multiplication': 'Matrix Mul',
+      'Sieve of Eratosthenes': 'Sieve',
+      'Fork-Join Create': 'FJ Create',
+      'Fork-Join Throughput': 'FJ Throughput',
+      'Logistic Map Series': 'Map Series',
+    }
+
     filebenchmap = {v: k for k, v in benchfilemap.items()}
 
     run_cloc()
@@ -142,13 +155,10 @@ if __name__ == '__main__':
 #      benchmarks = {"Banking", "Dining Philosophers", "Fib", "Logistic Map Series", "Sleeping Barber"}
 
       for benchmark in sorted(benchmarks):
-        if benchmark == "Recursive Matrix Multiplication":
-          print("Matrix Mult")
+        if benchmark in abbreviations:
+          print(abbreviations[benchmark])
         else:
-          if benchmark == "Concurrent Sorted Linked-List":
-            print("Concurrent Sorted List")
-          else:
-            print(benchmark)
+          print(benchmark)
         benchmark = benchmark
         print("&")
         print(loc_actor[benchmark])
@@ -159,7 +169,10 @@ if __name__ == '__main__':
         print("&")
         print(map_a_stats[benchmark]["cowns"])
         print("&")
-        print(map_a_stats[benchmark]["behaviours1"])
+        try:
+          print(f"$10^{{{math.log10(int(map_a_stats[benchmark]['behaviours1'])):.1f}}}$")
+        except Exception as e:
+          print(map_a_stats[benchmark]['behaviours1'])
         print("&")
         print(loc_full[benchmark])
         print("&")
@@ -169,7 +182,15 @@ if __name__ == '__main__':
         print("&")
         print(map_b_stats[benchmark]["cowns"])
         print("&")
-        print(map_b_stats[benchmark]["behaviours1"])
+        try:
+          print(f"$10^{{{math.log10(int(map_b_stats[benchmark]['behaviours1'])):.1f}}}$")
+        except Exception as e:
+          print(map_b_stats[benchmark]['behaviours1'])
         print("&")
-        print(map_b_stats[benchmark]["behaviours2"])
+        try:
+          print(f"$10^{{{math.log10(int(map_b_stats[benchmark]['behaviours2'])):.1f}}}$")
+        except Exception as e:
+          print(map_b_stats[benchmark]['behaviours2'])
+        print("&")
+        print(f"$10^{{{math.log10(int(map_b_stats[benchmark]['behaviours1']) + int(map_b_stats[benchmark]['behaviours2'])):.1f}}}$")
         print("\\\\")
