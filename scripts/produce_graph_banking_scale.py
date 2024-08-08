@@ -41,12 +41,19 @@ if __name__ == '__main__':
             title = 'Hardware Threads',
             tick0 = 1,
             dtick = 10,
-            range=[0, 41]
+            range=[0, 41],
+            showgrid=True
+            # There's some interaction between ticks and gridlines
+            # that means we have to turn gridlines on manually here
         ),
         yaxis = dict (
             title = 'Time Taken (ms)',
-            type="log", tickmode="array", tickvals=[1, 10, 100],
-            title_standoff = 0
+            type="log", tickmode="array",
+            tickvals=[10, 100, 1000],
+            # plotly handles log ranges in exponents rather than values
+            # for some reason
+            range=[1, 3],
+            title_standoff = 0,
         ),
         hovermode='closest',
         legend=dict(
