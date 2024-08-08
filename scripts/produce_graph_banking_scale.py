@@ -34,6 +34,8 @@ if __name__ == '__main__':
     # Use logarithmic y-axis
     fig.update_yaxes(type="log")
 
+    fontdict = dict(family="Courier New, monospace", size = 20, color = "black")
+
     layout = go.Layout(
         xaxis = dict(
             title = 'Hardware Threads',
@@ -58,11 +60,7 @@ if __name__ == '__main__':
           borderwidth=1,
           # itemsizing = "constant",
         ),
-        font=dict(
-          family="Courier New, monospace",
-          size=9,
-          color="black",
-        ),
+        font=fontdict,
       )
 
     fig.update_layout(layout)
