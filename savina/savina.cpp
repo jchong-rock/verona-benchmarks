@@ -7,6 +7,7 @@
 
 // FIXME: This is a quick hack around running just a single benchmark
 // for profiling. Ideally the framework would be redesigned to enable this
+// do you cook???
 
 static bool iequals(const std::string& a, const std::string& b)
 {
@@ -107,6 +108,32 @@ int main(const int argc, const char** argv) {
   {
     // BoC
     RUN(boc_benchmark::Banking, 1000, 50000, true);
+  }
+
+  if (savina.opt.has("--fib"))
+  {
+    // BoC
+    RUN(boc_benchmark::Fib, 20);
+  }
+
+  if (savina.opt.has("--leader"))
+  {
+    RUN(actor_benchmark::Leader<10>);
+  }
+
+  if (savina.opt.has("--leader2"))
+  {
+    RUN(actor_benchmark::Leader2, 100, 5);
+  }
+
+  if (savina.opt.has("--concdict"))
+  {
+    RUN(boc_benchmark::Concdict, 20, 10000, 10);
+  }
+
+  if (savina.opt.has("--dictler"))
+  {
+    RUN(boc_benchmark::Dictler);
   }
 
 }

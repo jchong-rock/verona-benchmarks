@@ -22,7 +22,6 @@ struct Fibonacci {
       return f1;
     }
   }
-
 };
 
 };
@@ -32,7 +31,12 @@ struct Fib: public BocBenchmark {
 
   Fib(uint64_t index): index(index) {}
 
-  void run() { fib::Fibonacci::compute(index); }
+  void run() { 
+    auto result = fib::Fibonacci::compute(index); 
+    when (result) << [=](acquired_cown<uint64_t> res) {
+      std::cout << "Fib " << index << " = " << res << std::endl;
+    };
+  }
 
   inline static const std::string name = "Fib";
 

@@ -63,6 +63,7 @@ struct Teller {
         double amount = self->random.nextDouble() * 1000;
 
         when(src, dst) << [busy_wait = self->busy_wait, amount, tag](acquired_cown<Account> src, acquired_cown<Account> dst) mutable {
+          //std::cout << "src balance " << src->balance << std::endl;
           src->debit(amount);
           dst->credit(amount);
           if (busy_wait) {

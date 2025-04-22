@@ -14,3 +14,5 @@
 #include "parallel/quicksort.h"
 #include "parallel/trapezoid.h"
 #include "parallel/sieve.h"
+
+#include "custom/dictler.h"

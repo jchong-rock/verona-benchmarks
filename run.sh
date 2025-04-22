@@ -1,0 +1,5 @@
+#! /bin/sh
+
+cmake -B build -G Ninja -DCMAKE_MAKE_PROGRAM=$PWD/ninja/ninja -DCMAKE_BUILD_TYPE=Release
+cd build; 
+../ninja/ninja && ./savina/savina --leader2

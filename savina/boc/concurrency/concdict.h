@@ -1,3 +1,6 @@
+#ifndef CONCDICT_H
+#define CONCDICT_H
+
 #include "util/bench.h"
 #include "util/random.h"
 
@@ -29,6 +32,9 @@ struct Dictionary {
   Dictionary() {}
   static void write(const cown_ptr<Dictionary>& self, cown_ptr<Worker> worker, uint64_t key, uint64_t value);
   static void read(const cown_ptr<Dictionary>& self, cown_ptr<Worker> worker, uint64_t key);
+  static void write2(const cown_ptr<Dictionary>& self, uint64_t key, uint64_t value);
+  static void read2(const cown_ptr<Dictionary>& self, uint64_t key);
+
 };
 
 struct Master {
@@ -36,7 +42,7 @@ struct Master {
   Master(uint64_t workers): workers(workers) {}
 
   static void make(uint64_t workers, uint64_t messages, uint64_t percentage) {
-    when(make_cown<Master>(workers)) << [workers, messages, percentage](acquired_cown<Master> master)  mutable{
+    when(make_cown<Master>(workers)) << [workers, messages, percentage](acquired_cown<Master> master) mutable {
       auto dictionary = make_cown<Dictionary>();
 
       for (uint64_t i = 0; i < workers; ++i) {
@@ -46,7 +52,7 @@ struct Master {
   }
 
   static void done(const cown_ptr<Master>& self) {
-    when(self) << [](acquired_cown<Master> self)  mutable{
+    when(self) << [](acquired_cown<Master> self) mutable {
       if (self->workers-- == 1) {
         /* done */
       }
@@ -55,7 +61,7 @@ struct Master {
 };
 
 void Worker::work(const cown_ptr<Worker>& self, uint64_t value) {
-  when(self) << [tag=self, value](acquired_cown<Worker> self)  mutable{
+  when(self) << [tag=self, value](acquired_cown<Worker> self) mutable {
     if (self->messages-- >= 1) {
       uint64_t value = self->random.nextInt(100);
       value %= (INT64_MAX / 4096);
@@ -86,6 +92,24 @@ void Dictionary::read(const cown_ptr<Dictionary>& self, cown_ptr<Worker> worker,
   };
 }
 
+void Dictionary::write2(const cown_ptr<Dictionary>& self, uint64_t key, uint64_t value) {
+  std::cout << "here" << std::endl;
+  when(self) << [=](acquired_cown<Dictionary> self) mutable {
+    self->map[key] = value;
+    std::cout << "writing walue " << value << " to entry " << key << std::endl;
+  };
+}
+
+void Dictionary::read2(const cown_ptr<Dictionary>& self, uint64_t key) {
+  when(verona::cpp::read(self)) << [=](acquired_cown<const Dictionary> self) mutable {
+    auto it = self->map.find(key);
+    if (it == self->map.end()) 
+      std::cout << "no walue found for key " << key << std::endl;
+    else
+      std::cout << "read walue" << it->second << " at entry " << key << std::endl;
+  };
+}
+
 };
 
 struct Concdict: BocBenchmark {
@@ -104,3 +128,5 @@ struct Concdict: BocBenchmark {
 };
 
 };
+
+#endif
