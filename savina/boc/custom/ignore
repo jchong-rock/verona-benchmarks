@@ -1,0 +1,110 @@
+#include "util/bench.h"
+#include "util/random.h"
+#include "typecheck.h"
+#include <unordered_set>
+
+namespace boc_benchmark {
+
+namespace leader_dag {
+
+typedef enum {
+    Start,
+    ID,
+    Elected
+} State;
+
+struct Message {
+    uint64_t sender_id;
+    State sender_state;
+
+    Message(uint64_t sender_id, State sender_state): sender_id(sender_id), sender_state(sender_state) {}
+};
+
+struct Node {
+    uint64_t id;
+    cown_ptr<Node> parent;
+    cown_array<Node> children;
+    bool started = false;
+    uint64_t highest_id;
+
+    Node(uint64_t id): id(id), highest_id(id) {
+        std::cout << " Made node with id : " << id << std::endl;
+    }
+    static void start(const cown_ptr<Node> & self) {
+        when (self) << [=](acquired_cown<Node> self) {
+            if (!self->started) {
+                self->started = true;
+                if (self->parent)
+                    start(self->parent);
+                if (children.length > 0) {
+                    for (cown_ptr<Node> child : self->children)
+                        start(child);
+                    propagate_ids(self);
+                }
+                // do something if we are a leaf?
+                // somehow need to ensure each layer blocks on the next layer before propagating ID
+                // may rewrite in actor style
+            }
+        };
+    }
+
+    static void propagate_ids(const cown_ptr<Node> & self) {
+        when(self, self->children) << [=](acquired_cown<Node> self, acquired_cown<Node> * children) {
+            for (auto child : children) {
+                self->highest_id = max(self->highest_id, child->highest_id);
+            }
+        }
+    }
+}
+
+};
+
+template <uint16_t servers>
+struct Leader: public ActorBenchmark {
+    
+    Leader() {} 
+
+    template <typename K>
+    static std::vector<K> gen_x_unique_randoms(K x) {
+        static_assert(std::is_integral<K>::value &&
+            std::is_unsigned<K>::value, "K must be an unsigned integer.");
+        std::unordered_set<K> num_set;
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        K max_value = (1 << (sizeof(K) * 8)) - 1;
+        std::uniform_int_distribution<K> dist(0, 65535);
+        while (num_set.size() < x) {
+            num_set.insert(dist(gen));
+        }
+        return std::vector<K>(num_set.begin(), num_set.end());
+    }
+
+    static void make() {
+        using namespace leader_dag;
+        std::vector<uint16_t> ids = gen_x_unique_randoms<uint16_t>(servers);
+        when (make_cown<Leader>()) << [=](acquired_cown<Leader> ld) {
+            std::vector<cown_ptr<leader_dag::Server>> server_list;
+            for (uint16_t i = 0; i < servers; i++) {
+                server_list.emplace_back(make_cown<Server>(ids[i]));
+            }
+            for (uint16_t i = 0; i < servers - 1; i++) {
+                when (server_list[i]) << [next=server_list[i + 1]](acquired_cown<Server> svr) {
+                    svr->next = next;
+                };
+                Server::check_mail(server_list[i]);
+            }
+
+            when (server_list[servers - 1]) << [first=server_list[0]](acquired_cown<Server> svr) {
+                svr->next = first;
+            };
+            Server::check_mail(server_list[servers - 1]);
+            Server::send(server_list[0], Message(0, Candidate));
+        };
+    }
+
+    void run() {
+        Leader::make();
+    }
+};
+
+};

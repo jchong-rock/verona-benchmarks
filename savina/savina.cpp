@@ -126,6 +126,11 @@ int main(const int argc, const char** argv) {
     RUN(actor_benchmark::Leader2, 100, 5);
   }
 
+  if (savina.opt.has("--leadag"))
+  {
+    RUN(actor_benchmark::LeaderDAG, 90, 4);
+  }
+
   if (savina.opt.has("--concdict"))
   {
     RUN(boc_benchmark::Concdict, 20, 10000, 10);
