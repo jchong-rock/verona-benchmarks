@@ -1,10 +1,10 @@
 #include "util/bench.h"
 #include "util/random.h"
-#include "typecheck.h"
-#include <unordered_set>
-#include <sstream>
+#include "../typecheck.h"
+#include "../safe_print.h"
+#include "../rng.h"
 
-namespace actor_benchmark {
+namespace jake_benchmark {
 
 namespace leader_dag {
 
@@ -70,22 +70,14 @@ struct Node {
     uint64_t highest_id;
     cown_ptr<Mailbox> mailbox = make_cown<Mailbox>();
 
-    
-
     Node(uint64_t id): id(id), highest_id(id) {
-        std::cout << " Made node with id : " << id << std::endl;
+        debug(" Made node with id : " , id);
     }
 
     Node(uint64_t id, cown_ptr<Node> parent): id(id), highest_id(id), parent(parent) {
-        std::ostringstream oss;
-        oss << " Made node with id : " << id << std::endl;
-        std::string var = oss.str();
-        std::cout << var;
+        debug(" Made node with id : " , id);
         when (parent) << [=](acquired_cown<Node> parent) {
-            std::ostringstream oss;
-            oss << " id "<< id << ": My parent is : " << parent->id << std::endl;
-            std::string var = oss.str();
-            std::cout << var;
+            debug(" id ", id, ": My parent is : ", parent->id);
         };
     }
 
@@ -103,10 +95,7 @@ struct Node {
 
     static void start(const cown_ptr<Node> & self, cown_ptr<uint64_t> sender_id) {
         when (self, sender_id) << [=](acquired_cown<Node> self, acquired_cown<uint64_t> sender_id) {
-            std::ostringstream oss;
-            oss << " start from : " << sender_id << " to id : " << self->id << std::endl;
-            std::string var = oss.str();
-            std::cout << var;
+            debug(" start from : ", sender_id, " to id : ", self->id);
             if (self->state != Candidate) {
                 self->state = Candidate;
                 if (self->parent)
@@ -123,70 +112,55 @@ struct Node {
 
     static void propagate_ids(const cown_ptr<Node> & self) {
         when(self) << [=](acquired_cown<Node> self) {
-            std::ostringstream oss;
-            oss << " propagate : " << self->highest_id << std::endl;
-            std::string var = oss.str();
-            std::cout << var;
+            debug(" propagate : ", self->highest_id);
             if (self->state == Candidate)
                 send(self->parent, Message(self->highest_id, HighestID));
         };
     }
 
     static void receive_id(const cown_ptr<Node> & self, std::shared_ptr<Message> msg) {
-        if (msg->msg_type != HighestID)
-            return;
-        when(self) << [=](acquired_cown<Node> self) {
-            std::ostringstream oss;
-            oss << " id : " << self->id << " -- recv prop from : " << msg->sender_id << std::endl;
-            std::string var = oss.str();
-            std::cout << var;
-            if (self->state == Candidate) {
-                self->highest_id = std::max(msg->sender_id, self->highest_id);
-                self->known_ids++;
-                std::ostringstream oss;
-                oss << " id : " << self->id << " kids : " << self->known_ids <<","<< self->children.size() << std::endl;
-                std::string var = oss.str();
-                std::cout << var;
-                if (self->known_ids == self->children.size()) {
-                    if (self->parent) {
-                        std::cout << " here1 "<< std::endl;
-                        propagate_ids(self.cown());
+        switch (msg->msg_type) {
+            case HighestID:
+                when(self) << [=](acquired_cown<Node> self) {
+                    debug(" id : ", self->id, " -- recv prop from : ", msg->sender_id);
+                    if (self->state == Candidate) {
+                        self->highest_id = std::max(msg->sender_id, self->highest_id);
+                        self->known_ids++;
+                        debug(" id : ", self->id, " kids : ", self->known_ids, ",", self->children.size());
+                        if (self->known_ids == self->children.size()) {
+                            if (self->parent) {
+                                debug(" here1 ");
+                                propagate_ids(self.cown());
+                            }
+                            else {
+                                debug(" here2 ", self->id);
+                                declare_leader(self.cown());
+                            }
+                        }
                     }
-                    else {
-            
-                        std::ostringstream oss;
-                        oss << " here2 " << self->id << std::endl;
-                        std::string var = oss.str();
-                        std::cout << var;
+                };
+                break;
+            case Elected:
+                when(self) << [=](acquired_cown<Node> self) {
+                    if (self->state == Candidate) {
+                        self->highest_id = msg->sender_id;
                         declare_leader(self.cown());
                     }
-                }
-            }
-        };
+                };
+                break;
+            default:
+                std::cerr << "Bad message: " << msg->msg_type << std::endl;
+        }
     }
 
     static void declare_leader(const cown_ptr<Node> & self) {
         when(self) << [=](acquired_cown<Node> self) {
-            std::ostringstream oss;
-            oss << " Leader elected with id : " << self->highest_id << std::endl;
-            std::string var = oss.str();
-            std::cout << var;
+            debug(" Leader elected with id : ", self->highest_id);
             if (self->state == Candidate) {
                 self->state = (self->id == self->highest_id) ? Leader : Follower;
                 for (auto child : self->children) {
                     send(child, Message(self->highest_id, Elected));
                 }
-            }
-        };
-    }
-
-    static void receive_elected(const cown_ptr<Node> & self, std::shared_ptr<Message> msg) {
-        if (msg->msg_type != Elected)
-            return;
-        when(self) << [=](acquired_cown<Node> self) {
-            if (self->state == Candidate) {
-                self->highest_id = msg->sender_id;
-                declare_leader(self.cown());
             }
         };
     }
@@ -205,7 +179,6 @@ void Mailbox::handle_mail(const cown_ptr<Mailbox> & self, cown_ptr<Node> svr, st
 
 void Node::check_mail(const cown_ptr<Node> & self) {
     when (self) << [tag=self](acquired_cown<Node> self) mutable {
-        Mailbox::handle_mail(self->mailbox, tag, Node::receive_elected);
         Mailbox::handle_mail(self->mailbox, tag, Node::receive_id);
     };
 }
@@ -216,38 +189,7 @@ struct LeaderDAG: public ActorBenchmark {
     uint64_t servers;
     uint64_t max_nodes_per_layer;
     
-    LeaderDAG(uint64_t servers, uint64_t max_nodes_per_layer): servers(servers), max_nodes_per_layer(max_nodes_per_layer) {} 
-
-    template <typename K>
-    std::vector<K> gen_x_unique_randoms(K x) {
-        static_assert(std::is_integral<K>::value &&
-            std::is_unsigned<K>::value, "K must be an unsigned integer.");
-        std::unordered_set<K> num_set;
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<K> dist(0, 20);
-        while (num_set.size() < x) {
-            num_set.insert(dist(gen));
-        }
-        return std::vector<K>(num_set.begin(), num_set.end());
-    }
-
-    template <typename K>
-    std::vector<K> divide_randomly(K dividend, K max_quotient) {
-        static_assert(std::is_integral<K>::value &&
-            std::is_unsigned<K>::value, "K must be an unsigned integer.");
-        K x = dividend;
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::vector<K> divisors;
-        std::uniform_int_distribution<K> dist(1, max_quotient);
-        while (x > 0) {
-            K val = std::min((K) 2, x);
-            divisors.push_back(val);
-            x -= val;
-        }
-        return divisors;
-    }
+    LeaderDAG(uint64_t servers, uint64_t max_nodes_per_layer): servers(servers), max_nodes_per_layer(max_nodes_per_layer) {}
 
     template <typename K>
     void init_children(cown_ptr<leader_dag::Node> parent, 

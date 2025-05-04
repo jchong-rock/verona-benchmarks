@@ -1,9 +1,9 @@
 #include "util/bench.h"
 #include "util/random.h"
-#include "typecheck.h"
-#include <unordered_set>
+#include "../typecheck.h"
+#include "../rng.h"
 
-namespace actor_benchmark {
+namespace jake_benchmark {
 
 namespace leader {
 
@@ -35,7 +35,7 @@ struct Mailbox {
 };
 
 struct Server {
-    uint16_t id;
+    uint64_t id;
     cown_ptr<Mailbox> mailbox = make_cown<Mailbox>();
     cown_ptr<Server> next;
     State state = Follower;
@@ -63,7 +63,7 @@ struct Server {
         };
     }
 
-    static void election(const cown_ptr<Server> & self, uint16_t message_id) {
+    static void election(const cown_ptr<Server> & self, uint64_t message_id) {
         when (self) << [=, tag=self](acquired_cown<Server> self) {
             self->state = Candidate;
             if (message_id == self->id) {
@@ -71,7 +71,7 @@ struct Server {
                 Server::broadcast(tag, Message(message_id, Leader));
             }
             else {
-                uint16_t highest_id = std::max(message_id, self->id);
+                uint64_t highest_id = std::max(message_id, self->id);
                 Server::broadcast(tag, Message(highest_id, Candidate));
             }
         };
@@ -118,35 +118,19 @@ void Server::electionMessage(const cown_ptr<Server> & self, std::shared_ptr<Mess
 }
 
 };
-template <uint16_t servers>
 struct Leader: public ActorBenchmark {
-    
-    Leader() {} 
+    uint64_t servers;
+    Leader(uint64_t servers): servers(servers) {} 
 
-    template <typename K>
-    static std::vector<K> gen_x_unique_randoms(K x) {
-        static_assert(std::is_integral<K>::value &&
-            std::is_unsigned<K>::value, "K must be an unsigned integer.");
-        std::unordered_set<K> num_set;
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        K max_value = (1 << (sizeof(K) * 8)) - 1;
-        std::uniform_int_distribution<K> dist(0, 65535);
-        while (num_set.size() < x) {
-            num_set.insert(dist(gen));
-        }
-        return std::vector<K>(num_set.begin(), num_set.end());
-    }
-
-    static void make() {
+    void make() {
         using namespace leader;
-        std::vector<uint16_t> ids = gen_x_unique_randoms<uint16_t>(servers);
-        when (make_cown<Leader>()) << [=](acquired_cown<Leader> ld) {
+        std::vector<uint64_t> ids = gen_x_unique_randoms<uint64_t>(servers);
+        when (make_cown<Leader>(servers)) << [=](acquired_cown<Leader> ld) {
             std::vector<cown_ptr<leader::Server>> server_list;
-            for (uint16_t i = 0; i < servers; i++) {
+            for (uint64_t i = 0; i < servers; i++) {
                 server_list.emplace_back(make_cown<Server>(ids[i]));
             }
-            for (uint16_t i = 0; i < servers - 1; i++) {
+            for (uint64_t i = 0; i < servers - 1; i++) {
                 when (server_list[i]) << [next=server_list[i + 1]](acquired_cown<Server> svr) {
                     svr->next = next;
                 };

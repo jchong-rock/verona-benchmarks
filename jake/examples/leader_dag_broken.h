@@ -1,12 +1,12 @@
 #include "util/bench.h"
 #include "util/random.h"
-#include "typecheck.h"
-#include "safe_print.h"
-#include <unordered_set>
+#include "../typecheck.h"
+#include "../rng.h"
+#include <sstream>
 
-namespace actor_benchmark {
+namespace jake_benchmark {
 
-namespace leader_dag {
+namespace leader_dag_broken {
 
 typedef enum {
     HighestID,
@@ -73,13 +73,19 @@ struct Node {
     
 
     Node(uint64_t id): id(id), highest_id(id) {
-        debug(" Made node with id : " , id);
+        std::cout << " Made node with id : " << id << std::endl;
     }
 
     Node(uint64_t id, cown_ptr<Node> parent): id(id), highest_id(id), parent(parent) {
-        debug(" Made node with id : " , id);
+        std::ostringstream oss;
+        oss << " Made node with id : " << id << std::endl;
+        std::string var = oss.str();
+        std::cout << var;
         when (parent) << [=](acquired_cown<Node> parent) {
-            debug(" id ", id, ": My parent is : ", parent->id);
+            std::ostringstream oss;
+            oss << " id "<< id << ": My parent is : " << parent->id << std::endl;
+            std::string var = oss.str();
+            std::cout << var;
         };
     }
 
@@ -97,7 +103,10 @@ struct Node {
 
     static void start(const cown_ptr<Node> & self, cown_ptr<uint64_t> sender_id) {
         when (self, sender_id) << [=](acquired_cown<Node> self, acquired_cown<uint64_t> sender_id) {
-            debug(" start from : ", sender_id, " to id : ", self->id);
+            std::ostringstream oss;
+            oss << " start from : " << sender_id << " to id : " << self->id << std::endl;
+            std::string var = oss.str();
+            std::cout << var;
             if (self->state != Candidate) {
                 self->state = Candidate;
                 if (self->parent)
@@ -114,55 +123,70 @@ struct Node {
 
     static void propagate_ids(const cown_ptr<Node> & self) {
         when(self) << [=](acquired_cown<Node> self) {
-            debug(" propagate : ", self->highest_id);
+            std::ostringstream oss;
+            oss << " propagate : " << self->highest_id << std::endl;
+            std::string var = oss.str();
+            std::cout << var;
             if (self->state == Candidate)
                 send(self->parent, Message(self->highest_id, HighestID));
         };
     }
 
     static void receive_id(const cown_ptr<Node> & self, std::shared_ptr<Message> msg) {
-        switch (msg->msg_type) {
-            case HighestID:
-                when(self) << [=](acquired_cown<Node> self) {
-                    debug(" id : ", self->id, " -- recv prop from : ", msg->sender_id);
-                    if (self->state == Candidate) {
-                        self->highest_id = std::max(msg->sender_id, self->highest_id);
-                        self->known_ids++;
-                        debug(" id : ", self->id, " kids : ", self->known_ids, ",", self->children.size());
-                        if (self->known_ids == self->children.size()) {
-                            if (self->parent) {
-                                debug(" here1 ");
-                                propagate_ids(self.cown());
-                            }
-                            else {
-                                debug(" here2 ", self->id);
-                                declare_leader(self.cown());
-                            }
-                        }
+        if (msg->msg_type != HighestID)
+            return;
+        when(self) << [=](acquired_cown<Node> self) {
+            std::ostringstream oss;
+            oss << " id : " << self->id << " -- recv prop from : " << msg->sender_id << std::endl;
+            std::string var = oss.str();
+            std::cout << var;
+            if (self->state == Candidate) {
+                self->highest_id = std::max(msg->sender_id, self->highest_id);
+                self->known_ids++;
+                std::ostringstream oss;
+                oss << " id : " << self->id << " kids : " << self->known_ids <<","<< self->children.size() << std::endl;
+                std::string var = oss.str();
+                std::cout << var;
+                if (self->known_ids == self->children.size()) {
+                    if (self->parent) {
+                        std::cout << " here1 "<< std::endl;
+                        propagate_ids(self.cown());
                     }
-                };
-                break;
-            case Elected:
-                when(self) << [=](acquired_cown<Node> self) {
-                    if (self->state == Candidate) {
-                        self->highest_id = msg->sender_id;
+                    else {
+            
+                        std::ostringstream oss;
+                        oss << " here2 " << self->id << std::endl;
+                        std::string var = oss.str();
+                        std::cout << var;
                         declare_leader(self.cown());
                     }
-                };
-                break;
-            default:
-                std::cerr << "Bad message: " << msg->msg_type << std::endl;
-        }
+                }
+            }
+        };
     }
 
     static void declare_leader(const cown_ptr<Node> & self) {
         when(self) << [=](acquired_cown<Node> self) {
-            debug(" Leader elected with id : ", self->highest_id);
+            std::ostringstream oss;
+            oss << " Leader elected with id : " << self->highest_id << std::endl;
+            std::string var = oss.str();
+            std::cout << var;
             if (self->state == Candidate) {
                 self->state = (self->id == self->highest_id) ? Leader : Follower;
                 for (auto child : self->children) {
                     send(child, Message(self->highest_id, Elected));
                 }
+            }
+        };
+    }
+
+    static void receive_elected(const cown_ptr<Node> & self, std::shared_ptr<Message> msg) {
+        if (msg->msg_type != Elected)
+            return;
+        when(self) << [=](acquired_cown<Node> self) {
+            if (self->state == Candidate) {
+                self->highest_id = msg->sender_id;
+                declare_leader(self.cown());
             }
         };
     }
@@ -181,58 +205,28 @@ void Mailbox::handle_mail(const cown_ptr<Mailbox> & self, cown_ptr<Node> svr, st
 
 void Node::check_mail(const cown_ptr<Node> & self) {
     when (self) << [tag=self](acquired_cown<Node> self) mutable {
+        Mailbox::handle_mail(self->mailbox, tag, Node::receive_elected);
         Mailbox::handle_mail(self->mailbox, tag, Node::receive_id);
     };
 }
 
 };
 
-struct LeaderDAG: public ActorBenchmark {
+struct LeaderDAGBroken: public ActorBenchmark {
     uint64_t servers;
     uint64_t max_nodes_per_layer;
     
-    LeaderDAG(uint64_t servers, uint64_t max_nodes_per_layer): servers(servers), max_nodes_per_layer(max_nodes_per_layer) {} 
+    LeaderDAGBroken(uint64_t servers, uint64_t max_nodes_per_layer): servers(servers), max_nodes_per_layer(max_nodes_per_layer) {} 
 
     template <typename K>
-    std::vector<K> gen_x_unique_randoms(K x) {
-        static_assert(std::is_integral<K>::value &&
-            std::is_unsigned<K>::value, "K must be an unsigned integer.");
-        std::unordered_set<K> num_set;
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<K> dist(0, 65536);
-        while (num_set.size() < x) {
-            num_set.insert(dist(gen));
-        }
-        return std::vector<K>(num_set.begin(), num_set.end());
-    }
-
-    template <typename K>
-    std::vector<K> divide_randomly(K dividend, K max_quotient) {
-        static_assert(std::is_integral<K>::value &&
-            std::is_unsigned<K>::value, "K must be an unsigned integer.");
-        K x = dividend;
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::vector<K> divisors;
-        std::uniform_int_distribution<K> dist(1, max_quotient);
-        while (x > 0) {
-            K val = std::min(dist(gen), x);
-            divisors.push_back(val);
-            x -= val;
-        }
-        return divisors;
-    }
-
-    template <typename K>
-    void init_children(cown_ptr<leader_dag::Node> parent, 
+    void init_children(cown_ptr<leader_dag_broken::Node> parent, 
                     cown_ptr<std::vector<K>> children_per_node, 
                     cown_ptr<std::vector<K>> ids, 
-                    cown_ptr<leader_dag::Counter<K>> counter) {
-        using namespace leader_dag;
+                    cown_ptr<leader_dag_broken::Counter<K>> counter) {
+        using namespace leader_dag_broken;
         when (children_per_node, parent, ids) << [=](
                     acquired_cown<std::vector<K>> children_per_node_list, 
-                    acquired_cown<leader_dag::Node> parent, 
+                    acquired_cown<leader_dag_broken::Node> parent, 
                     acquired_cown<std::vector<K>> id_list) {
             if (id_list->empty()) {
                 Counter<K>::done(counter);
@@ -240,8 +234,8 @@ struct LeaderDAG: public ActorBenchmark {
                 K num_children = children_per_node_list->back();
                 children_per_node_list->pop_back();
                 for (K i = 0; i < num_children; i++) {
-                    leader_dag::Node::check_mail(parent.cown());
-                    cown_ptr<leader_dag::Node> c = make_cown<leader_dag::Node>(id_list->back(), parent.cown());
+                    leader_dag_broken::Node::check_mail(parent.cown());
+                    cown_ptr<leader_dag_broken::Node> c = make_cown<leader_dag_broken::Node>(id_list->back(), parent.cown());
                     parent->children.push_back(c);
                     id_list->pop_back();
                     Counter<K>::add(counter);
@@ -252,14 +246,14 @@ struct LeaderDAG: public ActorBenchmark {
     }
 
     void make() {
-        using namespace leader_dag;
+        using namespace leader_dag_broken;
         cown_ptr<std::vector<uint64_t>> ids = make_cown<std::vector<uint64_t>>(gen_x_unique_randoms<uint64_t>(servers));
-        when (make_cown<LeaderDAG>(servers, max_nodes_per_layer)) << [=](acquired_cown<LeaderDAG> ld) {
+        when (make_cown<LeaderDAGBroken>(servers, max_nodes_per_layer)) << [=](acquired_cown<LeaderDAGBroken> ld) {
             cown_ptr<std::vector<uint64_t>> children_per_node = make_cown<std::vector<uint64_t>>(divide_randomly(servers-1, max_nodes_per_layer));
             // PRE: sum(children_per_node) == ids.size
             when (ids) << [=](acquired_cown<std::vector<uint64_t>> ids) mutable {
                 // INV: children_per_node.size == 0 ==> ids.size == 0
-                cown_ptr<leader_dag::Node> root = make_cown<leader_dag::Node>(ids->back());
+                cown_ptr<leader_dag_broken::Node> root = make_cown<leader_dag_broken::Node>(ids->back());
                 ids->pop_back();
                 cown_ptr<Counter<uint64_t>> counter = make_cown<Counter<uint64_t>>(servers-1, [=]() {
                     Node::start(root, make_cown<uint64_t>(100));
@@ -270,7 +264,7 @@ struct LeaderDAG: public ActorBenchmark {
     }
 
     void run() {
-        LeaderDAG::make();
+        LeaderDAGBroken::make();
     }
 };
 

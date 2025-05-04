@@ -88,7 +88,7 @@ void Worker::work(const cown_ptr<Worker>& self) {
             Dictionary::read(self->dictionary, tag, key);
         }
         else {
-            cout << "inwalid input." << endl;
+            cout << "invalid input." << endl;
         }
     };
 }
@@ -96,7 +96,7 @@ void Worker::work(const cown_ptr<Worker>& self) {
 void Dictionary::write(const cown_ptr<Dictionary>& self, cown_ptr<Worker> worker, uint64_t key, uint64_t value) {
   when(self) << [worker=move(worker), key, value](acquired_cown<Dictionary> self) mutable {
     self->map[key] = value;
-    std::cout << "writing walue " << value << " to entry " << key << std::endl;
+    std::cout << "writing value " << value << " to entry " << key << std::endl;
     Worker::work(worker);
   };
 }
@@ -106,9 +106,9 @@ void Dictionary::read(const cown_ptr<Dictionary>& self, cown_ptr<Worker> worker,
   when(verona::cpp::read(self)) << [=, worker=move(worker)](acquired_cown<const Dictionary> self) mutable {
     auto it = self->map.find(key);
     if (it == self->map.end()) 
-        std::cout << "no walue found for key " << key << std::endl;
+        std::cout << "no value found for key " << key << std::endl;
     else
-        std::cout << "read walue " << it->second << " at entry " << key << std::endl;
+        std::cout << "read value " << it->second << " at entry " << key << std::endl;
     Worker::work(worker);
   };
 }

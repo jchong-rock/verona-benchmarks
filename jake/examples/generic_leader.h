@@ -1,11 +1,10 @@
-
 #include "util/bench.h"
 #include "util/random.h"
-#include "typecheck.h"
-#include <unordered_set>
+#include "../typecheck.h"
+#include "../rng.h"
 
 uint64_t messages_we_sent = 0;
-namespace actor_benchmark {
+namespace jake_benchmark {
 
 namespace leader {
 
@@ -148,22 +147,7 @@ void Server::electionMessage(const cown_ptr<Server> & self, std::shared_ptr<Elec
 template <uint16_t servers>
 struct Leader: public ActorBenchmark {
     
-    Leader() {} 
-
-    template <typename K>
-    static std::vector<K> gen_x_unique_randoms(K x) {
-        static_assert(std::is_integral<K>::value &&
-            std::is_unsigned<K>::value, "K must be an unsigned integer.");
-        std::unordered_set<K> num_set;
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        K max_value = (1 << (sizeof(K) * 8)) - 1;
-        std::uniform_int_distribution<K> dist(0, 65535);
-        while (num_set.size() < x) {
-            num_set.insert(dist(gen));
-        }
-        return std::vector<K>(num_set.begin(), num_set.end());
-    }
+    Leader() {}
 
     static void make() {
         using namespace leader;

@@ -1,11 +1,11 @@
 #include "util/bench.h"
 #include "util/random.h"
-#include "typecheck.h"
-#include <unordered_set>
+#include "../typecheck.h"
+#include "../rng.h"
 
-namespace actor_benchmark {
+namespace jake_benchmark {
 
-namespace leader2 {
+namespace leader_multi_start {
 
 typedef enum {
     Leader,
@@ -118,32 +118,17 @@ void Server::electionMessage(const cown_ptr<Server> & self, std::shared_ptr<Mess
 }
 
 };
-struct Leader2: public ActorBenchmark {
+struct LeaderMultiStart: public ActorBenchmark {
     uint16_t servers;
     uint16_t starters;
     
-    Leader2(uint16_t servers, uint16_t starters): servers(servers), starters(starters) {} 
-
-    template <typename K>
-    std::vector<K> gen_x_unique_randoms(K x, K max) {
-        static_assert(std::is_integral<K>::value &&
-            std::is_unsigned<K>::value, "K must be an unsigned integer.");
-        std::unordered_set<K> num_set;
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        K max_value = (1 << (sizeof(K) * 8)) - 1;
-        std::uniform_int_distribution<K> dist(0, max);
-        while (num_set.size() < x) {
-            num_set.insert(dist(gen));
-        }
-        return std::vector<K>(num_set.begin(), num_set.end());
-    }
+    LeaderMultiStart(uint16_t servers, uint16_t starters): servers(servers), starters(starters) {} 
 
     void make() {
-        using namespace leader2;
+        using namespace leader_multi_start;
         std::vector<uint16_t> ids = gen_x_unique_randoms<uint16_t>(servers, 65535);
-        when (make_cown<Leader2>(servers, starters)) << [=](acquired_cown<Leader2> ld) {
-            std::vector<cown_ptr<leader2::Server>> server_list;
+        when (make_cown<LeaderMultiStart>(servers, starters)) << [=](acquired_cown<LeaderMultiStart> ld) {
+            std::vector<cown_ptr<leader_multi_start::Server>> server_list;
             for (uint16_t i = 0; i < servers; i++) {
                 server_list.emplace_back(make_cown<Server>(ids[i]));
             }
