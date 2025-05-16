@@ -53,16 +53,15 @@ struct Node {
         };
     }
 
-    static void start(const cown_ptr<Node> & self, cown_ptr<uint64_t> sender_id) {
-        when (self, sender_id) << [=](acquired_cown<Node> self, acquired_cown<uint64_t> sender_id) {
-            //debug(" start from : ", sender_id, " to id : ", self->id);
+    static void start(const cown_ptr<Node> & self) {
+        when (self) << [=](acquired_cown<Node> self) {
             if (self->state != Candidate) {
                 self->state = Candidate;
                 if (self->parent)
-                    start(self->parent, make_cown<uint64_t>(self->id));
+                    start(self->parent);
                 if (self->children.size() > 0) {
                     for (cown_ptr<Node> child : self->children)
-                        start(child, make_cown<uint64_t>(self->id));
+                        start(child);
                 }
                 else
                     propagate_ids(self.cown());
@@ -161,7 +160,7 @@ struct LeaderDAGNoMailbox: public ActorBenchmark {
                 cown_ptr<leader_dag_no_mailbox::Node> root = make_cown<leader_dag_no_mailbox::Node>(ids->back());
                 ids->pop_back();
                 cown_ptr<Counter<uint64_t>> counter = make_cown<Counter<uint64_t>>(servers-1, [=]() {
-                    Node::start(root, make_cown<uint64_t>(100));
+                    Node::start(root);
                 });
                 init_children<uint64_t>(root, children_per_node, ids.cown(), counter);
             };

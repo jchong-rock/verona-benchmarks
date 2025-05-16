@@ -5,6 +5,7 @@
 #include "examples/leader_dag.h"
 #include "examples/leader_dag_broken.h"
 #include "examples/leader_dag_no_mailbox.h"
+#include "examples/leader_arbitrary.h"
 
 #include <algorithm>
 
@@ -51,5 +52,8 @@ int main(const int argc, const char** argv) {
 
     if (benchmarker.opt.has("--leader_dag_no_mailbox"))
       RUN(jake_benchmark::LeaderDAGNoMailbox, servers, divisions);
+
+    if (benchmarker.opt.has("--leader_arbitrary"))
+      RUN(jake_benchmark::LeaderArbitrary, servers, divisions);
   }
 }

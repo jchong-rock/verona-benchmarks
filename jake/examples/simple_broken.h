@@ -6,7 +6,7 @@
 
 namespace jake_benchmark {
 
-namespace leader_dag_broken {
+namespace simple_broken {
 
 typedef enum {
     HighestID,
@@ -210,21 +210,21 @@ void Node::check_mail(const cown_ptr<Node> & self) {
 
 };
 
-struct LeaderDAGBroken: public ActorBenchmark {
+struct SimpleBroken: public ActorBenchmark {
     uint64_t servers = 10;
     uint64_t max_nodes_per_layer = 4;
     
-    LeaderDAGBroken(uint64_t servers, uint64_t max_nodes_per_layer) {} 
+    SimpleBroken(uint64_t servers, uint64_t max_nodes_per_layer) {} 
 
     template <typename K>
-    void init_children(cown_ptr<leader_dag_broken::Node> parent, 
+    void init_children(cown_ptr<simple_broken::Node> parent, 
                     cown_ptr<std::vector<K>> children_per_node, 
                     cown_ptr<std::vector<K>> ids, 
-                    cown_ptr<leader_dag_broken::Counter<K>> counter) {
-        using namespace leader_dag_broken;
+                    cown_ptr<simple_broken::Counter<K>> counter) {
+        using namespace simple_broken;
         when (children_per_node, parent, ids) << [=](
                     acquired_cown<std::vector<K>> children_per_node_list, 
-                    acquired_cown<leader_dag_broken::Node> parent, 
+                    acquired_cown<simple_broken::Node> parent, 
                     acquired_cown<std::vector<K>> id_list) {
             if (id_list->empty()) {
                 Counter<K>::done(counter);
@@ -232,8 +232,8 @@ struct LeaderDAGBroken: public ActorBenchmark {
                 K num_children = children_per_node_list->back();
                 children_per_node_list->pop_back();
                 for (K i = 0; i < num_children; i++) {
-                    leader_dag_broken::Node::check_mail(parent.cown());
-                    cown_ptr<leader_dag_broken::Node> c = make_cown<leader_dag_broken::Node>(id_list->back(), parent.cown());
+                    simple_broken::Node::check_mail(parent.cown());
+                    cown_ptr<simple_broken::Node> c = make_cown<simple_broken::Node>(id_list->back(), parent.cown());
                     parent->children.push_back(c);
                     id_list->pop_back();
                     Counter<K>::add(counter);
@@ -244,16 +244,16 @@ struct LeaderDAGBroken: public ActorBenchmark {
     }
 
     void make() {
-        using namespace leader_dag_broken;
+        using namespace simple_broken;
         std::vector<uint64_t> i {1,5,4,6,7,2,8,9,0,3};
         cown_ptr<std::vector<uint64_t>> ids = make_cown<std::vector<uint64_t>>(i);
-        when (make_cown<LeaderDAGBroken>(servers, max_nodes_per_layer)) << [=](acquired_cown<LeaderDAGBroken> ld) {
+        when (make_cown<SimpleBroken>(servers, max_nodes_per_layer)) << [=](acquired_cown<SimpleBroken> ld) {
             std::vector<uint64_t> c {2,2,1,1,1,2};
             cown_ptr<std::vector<uint64_t>> children_per_node = make_cown<std::vector<uint64_t>>(c);
             // PRE: sum(children_per_node) == ids.size
             when (ids) << [=](acquired_cown<std::vector<uint64_t>> ids) mutable {
                 // INV: children_per_node.size == 0 ==> ids.size == 0
-                cown_ptr<leader_dag_broken::Node> root = make_cown<leader_dag_broken::Node>(ids->back());
+                cown_ptr<simple_broken::Node> root = make_cown<simple_broken::Node>(ids->back());
                 ids->pop_back();
                 cown_ptr<Counter<uint64_t>> counter = make_cown<Counter<uint64_t>>(servers-1, [=]() {
                     Node::start(root, make_cown<uint64_t>(100));
@@ -264,7 +264,7 @@ struct LeaderDAGBroken: public ActorBenchmark {
     }
 
     void run() {
-        LeaderDAGBroken::make();
+        SimpleBroken::make();
     }
 };
 
