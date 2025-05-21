@@ -6,9 +6,11 @@
 #include "examples/leader_dag_broken.h"
 #include "examples/leader_dag_no_mailbox.h"
 #include "examples/leader_arbitrary.h"
+#include "examples/breakfast.h"
 
 #include <algorithm>
 
+// Copied from Savina benchmarking suite.
 // FIXME: This is a quick hack around running just a single benchmark
 // for profiling. Ideally the framework would be redesigned to enable this
 
@@ -55,5 +57,8 @@ int main(const int argc, const char** argv) {
 
     if (benchmarker.opt.has("--leader_arbitrary"))
       RUN(jake_benchmark::LeaderArbitrary, servers, divisions);
+
+    if (benchmarker.opt.has("--breakfast"))
+      RUN(jake_benchmark::Breakfast, servers, divisions);
   }
 }
