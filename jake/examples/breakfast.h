@@ -130,16 +130,25 @@ namespace breakfast {
         }
     };
 
-    struct Bacon : public Food {
-        int number;
+    struct Pan;
+
+    class Fryable : public Food {
+      protected:
         bool cooked = false;
+        virtual int cook_time() = 0;
+        friend class Pan;
+      public:
         bool ready() override {
             return cooked;
         }
+    };
+
+    struct Bacon : public Fryable {
+        int number;
         Bacon(int number): number(number) {
             //debug("made bacon ", number);
         };
-        int cook_time() {
+        int cook_time() override {
             return 10;
         }
         std::string item_name() override {
@@ -147,16 +156,12 @@ namespace breakfast {
         }
     };
 
-    struct Egg : public Food {
+    struct Egg : public Fryable {
         int number;
-        bool cooked = false;
-        bool ready() override {
-            return cooked;
-        }
         Egg(int number): number(number) {
             //debug("cracked egg ", number);
         };
-        int cook_time() {
+        int cook_time() override {
             return 5;
         }
         std::string item_name() override {
@@ -164,13 +169,14 @@ namespace breakfast {
         }
     };
 
-    using Fryable = std::variant<cown_ptr<Bacon>, cown_ptr<Egg>>;
+    using FryableCown = std::variant<cown_ptr<Bacon>, cown_ptr<Egg>>;
+    using FoodCown = std::variant<cown_ptr<Bacon>, cown_ptr<Egg>, cown_ptr<Bread>, cown_ptr<Cup>>;
 
     struct Pan {
         bool warm = false;
         int capacity;
         int spaces;
-        std::queue<Fryable> queue;
+        std::queue<FryableCown> queue;
         Pan(int capacity): capacity(capacity), spaces(capacity) {}
 
         static void heat_pan(cown_ptr<Pan> & self) {
@@ -194,7 +200,7 @@ namespace breakfast {
             };
         }
 
-        static void cook_item(const cown_ptr<Pan> & self, Fryable & item) {
+        static void cook_item(const cown_ptr<Pan> & self, FryableCown & item) {
             when (self) << [=](acquired_cown<Pan> tag) {
                 if (tag->warm) {
                     if (tag->spaces > 0) {
@@ -227,17 +233,43 @@ namespace breakfast {
     };
 };
 
+struct Bool {
+    bool value;
+    Bool(bool value): value(value) {}
+};
+
 struct Breakfast : public ActorBenchmark {
     int bacon_num;
     int egg_num;
     Breakfast(int bacon_num, int egg_num): bacon_num(bacon_num), egg_num(egg_num) {}
+
+    void finish(std::vector<breakfast::FoodCown> food) {
+        using namespace breakfast;
+        cown_ptr<Bool> finished = make_cown<Bool>(true);
+        for (auto & f : food) {
+            std::visit([=](auto & food_cown) {
+                when (food_cown, finished) << [=](auto food, auto finished) {
+                    finished->value &= food->ready();
+                };
+            }, f);
+        }
+        when (finished) << [=](acquired_cown<Bool> finished) {
+            if (finished->value) {
+                debug("Finished making breakfast");
+                std::exit(0);
+            }
+            else {
+                finish(food);
+            }
+        };
+    }
 
     void run() {
         using namespace breakfast;
         when (make_cown<Breakfast>(bacon_num,egg_num)) << [=](acquired_cown<Breakfast> bk) {
             cown_ptr<Bread> bread = make_cown<Bread>();
             cown_ptr<Cup> cup = make_cown<Cup>();
-            std::vector<Fryable> fryables;
+            std::vector<FryableCown> fryables;
 
             cown_ptr<Pan> pan = make_cown<Pan>(bacon_num);
             Pan::heat_pan(pan);
@@ -256,10 +288,19 @@ struct Breakfast : public ActorBenchmark {
             for (int i = 1; i <= egg_num; i++) {
                 fryables.push_back(make_cown<Egg>(i));
             }
-            
+
+            std::vector<FoodCown> food;
+
             for (auto & f : fryables) {
                 Pan::cook_item(pan, f);
-            }            
+                std::visit([&](auto && cown) {
+                    food.emplace_back(cown);
+                }, f);
+            }
+
+            food.push_back(cup);
+            food.push_back(bread);
+            finish(food);
         };
     }
 };
