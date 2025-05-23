@@ -21,6 +21,10 @@ namespace breakfast {
         virtual std::string item_name() = 0;
     };
 
+    struct Appliance {
+        virtual ~Appliance = default;
+    }
+
     struct Toastable : public Food {
         bool toasted = false;
         virtual int toast_time() = 0;
@@ -176,6 +180,7 @@ namespace breakfast {
     using FoodCown = std::variant<cown_ptr<Bacon>, cown_ptr<Egg>, cown_ptr<Bread>, cown_ptr<Cup>>;
     using ToastableCown = std::variant<cown_ptr<Bread>>;
 
+    // Bells are generic so we can use them for other appliances, e.g. microwaves
     template <typename T>
     struct Bell {
         std::function<void(T)> queued_callback;
@@ -196,7 +201,7 @@ namespace breakfast {
         }
     };
 
-    struct Toaster {
+    struct Toaster : public Appliance {
         int temperature = 0;
         cown_ptr<Bell<ToastableCown>> bell;
 
@@ -223,7 +228,7 @@ namespace breakfast {
         }
     };
 
-    struct Pan {
+    struct Pan : public Appliance {
         bool warm = false;
         int capacity;
         int spaces;
