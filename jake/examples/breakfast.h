@@ -5,6 +5,7 @@
 #include "../rng.h"
 #include <map>
 #include <unistd.h>
+#include <stdexcept>
 
 #define MICROSECS 1000000
 
@@ -12,13 +13,23 @@ namespace jake_benchmark {
 
 namespace breakfast {
 
+    // We use inheritance to make it easy to extend this program
+    // e.g. we could add Bagels, which could inherit from Toastable
+
     struct Food {
         virtual bool ready() = 0;
         virtual std::string item_name() = 0;
     };
 
-    struct Bread : public Food {
+    struct Toastable : public Food {
         bool toasted = false;
+        virtual int toast_time() = 0;
+        bool ready() override {
+            return toasted;
+        }
+    };
+
+    struct Bread : public Toastable {
         bool has_jam = false;
         bool has_butter = false;
         std::string item_name() override {
@@ -27,18 +38,8 @@ namespace breakfast {
         bool ready() override {
             return toasted && has_jam && has_butter;
         }
-        static void toast(cown_ptr<Bread> & self) {
-            when (self) << [=](acquired_cown<Bread> self) {
-                if (!self->toasted) {
-                    debug("Begin toasting ", self->item_name());
-                    usleep(8 * MICROSECS);
-                    self->toasted = true;
-                    debug("Finished making ", self->item_name());
-                }
-                else {
-                    throw ("Burned " + self->item_name());
-                }
-            };
+        int toast_time() override {
+            return 8;
         }
         static void add_jam(cown_ptr<Bread> & self) {
             when (self) << [=](acquired_cown<Bread> self) {
@@ -49,7 +50,7 @@ namespace breakfast {
                     debug("Added jam to toast");
                 }
                 else {
-                    throw "Cannot add jam to untoasted bread";
+                    throw std::runtime_error("Cannot add jam to untoasted bread");
                 }
             };
         }
@@ -62,7 +63,7 @@ namespace breakfast {
                     debug("Buttered toast");
                 }
                 else {
-                    throw "Ewww, buttered raw bread!";
+                    throw std::runtime_error("Ewww, buttered raw bread!");
                 }
             };
         }
@@ -87,7 +88,7 @@ namespace breakfast {
             when (self) << [=](acquired_cown<Cup> self) {
                 debug("Begin pouring coffee");
                 if (self->has_coffee || self->has_juice) {
-                    throw ("Full " + self->item_name());
+                    throw std::runtime_error("Full " + self->item_name());
                 }
                 else {
                     usleep(MICROSECS / 2);
@@ -100,7 +101,7 @@ namespace breakfast {
             when (self) << [=](acquired_cown<Cup> self) {
                 debug("Begin pouring juice");
                 if (self->has_coffee || self->has_juice) {
-                    throw ("Full " + self->item_name());
+                    throw std::runtime_error("Full " + self->item_name());
                 }
                 else {
                     usleep(MICROSECS / 2);
@@ -124,7 +125,7 @@ namespace breakfast {
                     debug("Finished drinking juice");
                 }
                 else {
-                    throw ("Cannot drink from empty cup");
+                    throw std::runtime_error("Cannot drink from empty cup");
                 }
             };
         }
@@ -169,8 +170,58 @@ namespace breakfast {
         }
     };
 
+    // since Verona's cown_ptr type doesnt support inheritance, we can cheat using variant and visit
+    // we will store cowns in vectors using variant and dispatch their behaviours using visit
     using FryableCown = std::variant<cown_ptr<Bacon>, cown_ptr<Egg>>;
     using FoodCown = std::variant<cown_ptr<Bacon>, cown_ptr<Egg>, cown_ptr<Bread>, cown_ptr<Cup>>;
+    using ToastableCown = std::variant<cown_ptr<Bread>>;
+
+    template <typename T>
+    struct Bell {
+        std::function<void(T)> queued_callback;
+        static void await(const cown_ptr<Bell<T>> & self, std::function<void(T)> callback) {
+            when (self) << [=](acquired_cown<Bell<T>> self)  {
+                if (self->queued_callback == nullptr) {
+                    self->queued_callback = callback;
+                }
+            };
+        }
+        static void notify(const cown_ptr<Bell<T>> & self, T item) {
+            when (self) << [=](acquired_cown<Bell<T>> self)  {
+                if (self->queued_callback != nullptr) {
+                    self->queued_callback(item);
+                    self->queued_callback = nullptr;
+                }
+            };
+        }
+    };
+
+    struct Toaster {
+        int temperature = 0;
+        cown_ptr<Bell<ToastableCown>> bell;
+
+        Toaster(cown_ptr<Bell<ToastableCown>> bell): bell(bell) {}
+        
+        static void toast(const cown_ptr<Toaster> & self, ToastableCown item) {
+            when (self) << [=](acquired_cown<Toaster> tag) {
+                tag->temperature = std::max(10, tag->temperature + 1);
+                std::visit([=](auto & toastable_cown) {
+                    when (self, toastable_cown) << [=](acquired_cown<Toaster> self, auto toastable) {
+                        if (!toastable->toasted) {
+                            debug("Begin toasting ", toastable->item_name());
+                            usleep(toastable->toast_time() * MICROSECS - self->temperature * 1000);
+                            toastable->toasted = true;
+                            debug("Finished making ", toastable->item_name());
+                            Bell<ToastableCown>::notify(self->bell, toastable_cown);
+                        }
+                        else {
+                            throw std::runtime_error("Burned " + toastable->item_name());
+                        }
+                    };
+                }, item);
+            };
+        }
+    };
 
     struct Pan {
         bool warm = false;
@@ -214,7 +265,7 @@ namespace breakfast {
                                     debug("Finished frying ", fryable->item_name());
                                 }
                                 else {
-                                    throw ("Burned " + fryable->item_name());
+                                    throw std::runtime_error("Burned " + fryable->item_name());
                                 }
                                 Pan::finish(self);
                             };
@@ -226,7 +277,7 @@ namespace breakfast {
                     }
                 }
                 else {
-                    throw "Cannot cook on cold pan";
+                    throw std::runtime_error("Cannot cook on cold pan");
                 }
             };
         }
@@ -242,7 +293,9 @@ struct Breakfast : public ActorBenchmark {
     int bacon_num;
     int egg_num;
     Breakfast(int bacon_num, int egg_num): bacon_num(bacon_num), egg_num(egg_num) {}
-
+    // this is not ideal, I would prefer to be able to acquire all cowns at once, 
+    // but C++ makes it very difficult to turn a vector into a VARARGS list,
+    // especially when each member of the vector is of a different type.
     void finish(std::vector<breakfast::FoodCown> food) {
         using namespace breakfast;
         cown_ptr<Bool> finished = make_cown<Bool>(true);
@@ -272,11 +325,17 @@ struct Breakfast : public ActorBenchmark {
             std::vector<FryableCown> fryables;
 
             cown_ptr<Pan> pan = make_cown<Pan>(bacon_num);
+            cown_ptr<Bell<ToastableCown>> toaster_bell = make_cown<Bell<ToastableCown>>();
+            cown_ptr<Toaster> toaster = make_cown<Toaster>(toaster_bell);
             Pan::heat_pan(pan);
 
-            Bread::toast(bread);
-            Bread::add_jam(bread);
-            Bread::add_butter(bread);
+            Bell<ToastableCown>::await(toaster_bell, [=](ToastableCown t) {
+                std::visit([=](auto & bread_cown) {
+                    Bread::add_jam(bread_cown);
+                    Bread::add_butter(bread_cown);
+                }, t);
+            });
+            Toaster::toast(toaster, bread);
 
             Cup::pour_coffee(cup);
             Cup::drink(cup);
