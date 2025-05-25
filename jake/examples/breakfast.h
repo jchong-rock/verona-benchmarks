@@ -22,8 +22,8 @@ namespace breakfast {
     };
 
     struct Appliance {
-        virtual ~Appliance = default;
-    }
+        
+    };
 
     struct Toastable : public Food {
         bool toasted = false;
