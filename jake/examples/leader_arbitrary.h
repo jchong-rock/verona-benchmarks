@@ -3,7 +3,7 @@
 #include "../typecheck.h"
 #include "../safe_print.h"
 #include "../rng.h"
-#include <map>
+#include <unordered_set>
 
 namespace jake_benchmark {
 
@@ -17,8 +17,7 @@ typedef enum {
 
 struct Node {
     uint64_t id;
-    // mapping from neighbour ID to its cown
-    std::map<uint64_t, cown_ptr<Node>> neighbours;
+    std::vector<cown_ptr<Node>> neighbours;
     State state = Follower;
     std::unordered_set<uint64_t> received_from;
     uint64_t highest_id;
@@ -30,19 +29,19 @@ struct Node {
 
     static void add_neighbour(const cown_ptr<Node> & self, cown_ptr<Node> neighbour) {
         when (self, neighbour) << [=](acquired_cown<Node> self, acquired_cown<Node> neighbour) {
-            self->neighbours[neighbour->id] = neighbour.cown();
-            neighbour->neighbours[self->id] = self.cown();
+            self->neighbours.push_back(neighbour.cown());
+            neighbour->neighbours.push_back(self.cown());
         };
     }
 
-    static void start(const cown_ptr<Node> & self, cown_ptr<uint64_t> sender_id) {
-        when (self, sender_id) << [=](acquired_cown<Node> self, acquired_cown<uint64_t> sender_id) {
-            debug(" start from : ", sender_id, " to id : ", self->id);
+    static void start(const cown_ptr<Node> & self, uint64_t sender_id) {
+        when (self) << [=](acquired_cown<Node> self) {
             if (self->state != Candidate) {
+                debug(" start from : ", sender_id, " to id : ", self->id);
                 self->state = Candidate;
                 self->received_from.insert(self->id);
-                for (auto const& [_, child] : self->neighbours)
-                    start(child, make_cown<uint64_t>(self->id));
+                for (auto const& child : self->neighbours)
+                    start(child, self->id);
                 propagate_ids(self.cown());
             }
         };
@@ -51,8 +50,9 @@ struct Node {
     static void propagate_ids(const cown_ptr<Node> & self) {
         when(self) << [=](acquired_cown<Node> self) {
             if (self->state == Candidate) {
-                for (auto const& [_, child] : self->neighbours)
+                for (auto const& child : self->neighbours)
                     receive_id(child, self->received_from, self->highest_id);
+                
             }
         };
     }
@@ -60,12 +60,12 @@ struct Node {
     static void receive_id(const cown_ptr<Node> & self, std::unordered_set<uint64_t> seen, uint64_t highest_id) {
         when(self) << [=](acquired_cown<Node> self) {
             if (self->state == Candidate) {
-                debug(" id : ", self->id, " -- recv prop : ", highest_id /*," seen: ", self->received_from.size()*/);
-                self->received_from.insert(seen.begin(), seen.end());;
+                self->received_from.insert(seen.begin(), seen.end());
+                debug(" id : ", self->id, " -- recv prop : ", highest_id ," seen: ", self->received_from.size());
                 if (self->received_from.size() == self->total_servers) {
                     declare_leader(self.cown());
                 }
-                else if (self->highest_id < highest_id) {
+                else {
                     propagate_ids(self.cown());
                 }
                 self->highest_id = std::max(highest_id, self->highest_id);
@@ -87,7 +87,7 @@ struct Node {
             debug(" Leader elected with id : ", self->highest_id);
             if (self->state == Candidate) {
                 self->state = (self->id == self->highest_id) ? Leader : Follower;
-                for (auto const& [_, child] : self->neighbours)
+                for (auto const& child : self->neighbours)
                     election_result(child, self->highest_id);
             }
         };
@@ -105,7 +105,7 @@ struct LeaderArbitrary: public ActorBenchmark {
     template <typename K>
     void init_nodes(cown_ptr<leader_arbitrary::Node> root, 
                     cown_ptr<std::vector<K>> ids,
-                    std::function<void()> cb) {
+                    std::function<void()> callback) {
         using namespace leader_arbitrary;
         when (root, ids) << [=](
                     acquired_cown<Node> root, 
@@ -131,7 +131,7 @@ struct LeaderArbitrary: public ActorBenchmark {
                     remaining--;
                 }
             }
-            cb();
+            callback();
         };
     }
 
@@ -145,7 +145,7 @@ struct LeaderArbitrary: public ActorBenchmark {
                 cown_ptr<Node> root = make_cown<Node>(ids->back(), servers);
                 ids->pop_back();
                 init_nodes<uint64_t>(root, ids.cown(), [=]() {
-                    Node::start(root, make_cown<uint64_t>(1000000));
+                    Node::start(root, 1000000);
                 });
             };
         };
