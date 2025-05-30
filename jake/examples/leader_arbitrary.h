@@ -34,14 +34,14 @@ struct Node {
         };
     }
 
-    static void start(const cown_ptr<Node> & self, uint64_t sender_id) {
+    static void start(const cown_ptr<Node> & self) {
         when (self) << [=](acquired_cown<Node> self) {
             if (self->state != Candidate) {
-                debug(" start from : ", sender_id, " to id : ", self->id);
+                //debug(" start to id : ", self->id);
                 self->state = Candidate;
                 self->received_from.insert(self->id);
                 for (auto const& child : self->neighbours)
-                    start(child, self->id);
+                    start(child);
                 propagate_ids(self.cown());
             }
         };
@@ -61,14 +61,14 @@ struct Node {
         when(self) << [=](acquired_cown<Node> self) {
             if (self->state == Candidate) {
                 self->received_from.insert(seen.begin(), seen.end());
-                debug(" id : ", self->id, " -- recv prop : ", highest_id ," seen: ", self->received_from.size());
+                //debug(" id : ", self->id, " -- recv prop : ", highest_id ," seen: ", self->received_from.size());
+                self->highest_id = std::max(highest_id, self->highest_id);
                 if (self->received_from.size() == self->total_servers) {
                     declare_leader(self.cown());
                 }
                 else {
                     propagate_ids(self.cown());
                 }
-                self->highest_id = std::max(highest_id, self->highest_id);
             }
         };
     }
@@ -84,8 +84,8 @@ struct Node {
 
     static void declare_leader(const cown_ptr<Node> & self) {
         when(self) << [=](acquired_cown<Node> self) {
-            debug(" Leader elected with id : ", self->highest_id);
             if (self->state == Candidate) {
+                debug(" Leader elected with id : ", self->highest_id);
                 self->state = (self->id == self->highest_id) ? Leader : Follower;
                 for (auto const& child : self->neighbours)
                     election_result(child, self->highest_id);
@@ -145,7 +145,7 @@ struct LeaderArbitrary: public ActorBenchmark {
                 cown_ptr<Node> root = make_cown<Node>(ids->back(), servers);
                 ids->pop_back();
                 init_nodes<uint64_t>(root, ids.cown(), [=]() {
-                    Node::start(root, 1000000);
+                    Node::start(root);
                 });
             };
         };

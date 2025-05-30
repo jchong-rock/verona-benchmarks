@@ -2,4 +2,4 @@
 
 cmake -B build -G Ninja -DCMAKE_MAKE_PROGRAM=$PWD/ninja/ninja -DCMAKE_BUILD_TYPE=Release
 cd build; 
-../ninja/ninja && ./jake/benchmarker --leader_arbitrary --servers 100 --divisions 40
+../ninja/ninja && ./jake/benchmarker --breakfast --servers 100 --divisions 40
