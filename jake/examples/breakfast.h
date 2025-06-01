@@ -45,31 +45,28 @@ namespace breakfast {
         int toast_time() override {
             return 8;
         }
-        static void add_jam(cown_ptr<Bread> & self) {
-            when (self) << [=](acquired_cown<Bread> self) {
-                debug("Begin adding jam");
-                if (self->toasted) {
-                    self->has_jam = true;
-                    debug("Added jam to toast");
-                }
-                else {
-                    throw std::runtime_error("Cannot add jam to untoasted bread");
-                }
-            };
+        void add_jam() {
+            debug("Begin adding jam");
+            if (this->toasted) {
+                this->has_jam = true;
+                debug("Added jam to toast");
+            }
+            else {
+                throw std::runtime_error("Cannot add jam to untoasted bread");
+            }
         }
-        static void add_butter(cown_ptr<Bread> & self) {
-            when (self) << [=](acquired_cown<Bread> self) {
-                debug("Begin buttering toast");
-                if (self->toasted) {
-                    self->has_butter = true;
-                    debug("Buttered toast");
-                }
-                else {
-                    throw std::runtime_error("Ewww, buttered raw bread!");
-                }
-            };
+        void add_butter() {
+            debug("Begin buttering toast");
+            if (this->toasted) {
+                this->has_butter = true;
+                debug("Buttered toast");
+            }
+            else {
+                throw std::runtime_error("Ewww, buttered raw bread!");
+            }
+            
         }
-        static void toast(const cown_ptr<Bread> & self) {
+        static void toast(const cown_ptr<Bread> & self, std::function<void()> callback) {
             when (self) << [=](acquired_cown<Bread> self) {
                 if (!self->toasted) {
                     for (int i = 0; i < self->slices; i++)
@@ -82,6 +79,7 @@ namespace breakfast {
                 else {
                     throw std::runtime_error("Burned " + self->item_name());
                 }
+                callback();
             };
         }
     };
@@ -225,9 +223,12 @@ struct Breakfast : public ActorBenchmark {
 
             Fryable::fry(bacon);
             Fryable::fry(egg);
-            Bread::toast(bread);
-            Bread::add_butter(bread);
-            Bread::add_jam(bread);
+            Bread::toast(bread, [=]() {
+                when (bread) << [](acquired_cown<Bread> bread) {
+                    bread->add_butter();
+                    bread->add_jam();
+                };
+            });
 
             std::vector<FoodCown> food;
             
