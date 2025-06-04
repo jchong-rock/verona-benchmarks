@@ -13,29 +13,15 @@ namespace jake_benchmark {
 
 namespace breakfast {
 
-    // We use inheritance to make it easy to extend this program
-    // e.g. we could add Bagels, which could inherit from Toastable
-
-    struct Food {
-        virtual bool ready() = 0;
-    };
-
-    struct Bread : public Food {
-        bool toasted = false;
+    struct Bread {
         int slices;
-        bool has_jam = false;
-        bool has_butter = false;
-        static const int toast_time = 8;
         Bread(int slices): slices(slices) {}
-        bool ready() override {
-            return toasted && has_jam && has_butter;
-        }
+        static const int toast_time = 8;
+
         void add_jam() {
-            has_jam = true;
             debug("Added jam to toast");
         }
         void add_butter() {
-            has_butter = true;
             debug("Buttered toast");
         }
         static void toast(const cown_ptr<Bread> & bread) {
@@ -67,23 +53,10 @@ namespace breakfast {
         }
     };
 
-    struct Fryable;
-    struct Egg;
-    struct Bacon;
-
-    // since Verona's cown_ptr type doesnt support inheritance, we can cheat using variant and visit
-    // we will store cowns in vectors using variant and dispatch their behaviours using visit
-    using FoodCown = std::variant<cown_ptr<Bacon>, cown_ptr<Egg>, cown_ptr<Bread>>;
-
-    struct Bacon : public Food {
+    struct Bacon {
         int count;
         Bacon(int count): count(count) {}
         static const int cook_time = 10;
-        bool cooked = false;
-
-        bool ready() override {
-            return cooked;
-        }
         
         static void fry(const cown_ptr<Bacon> & bacon) {
             when (bacon) << [=](auto bacon) {
@@ -94,21 +67,15 @@ namespace breakfast {
                     debug("Flipping a side of bacon");
                 debug("Cooking second side of bacon");
                 usleep(Bacon::cook_time * MICROSECS);
-                bacon->cooked = true;
             };
         }
     };
 
 
-    struct Egg : public Food {
+    struct Egg {
         int count;
         Egg(int count): count(count) {}
         static const int cook_time = 5;
-        bool cooked = false;
-
-        bool ready() override {
-            return cooked;
-        }
         
         static void fry(const cown_ptr<Egg> & egg) {
             when (egg) << [=](auto egg) {
@@ -117,7 +84,6 @@ namespace breakfast {
                 debug("Cracking ", egg->count, " eggs");
                 debug("Cooking the eggs");
                 usleep(Egg::cook_time * MICROSECS);
-                egg->cooked = true;
             };
         }
     };
@@ -136,6 +102,7 @@ struct Breakfast : public ActorBenchmark {
             cown_ptr<Egg> egg = make_cown<Egg>(3);
             
             Coffee();
+            debug("Coffee is ready");
 
             Bacon::fry(bacon);
             Egg::fry(egg);
@@ -147,20 +114,18 @@ struct Breakfast : public ActorBenchmark {
             };
 
             when (bread) << [](acquired_cown<Bread> bread) {
-                if (bread->ready())
                     debug("Toast is ready");
             };
             when (egg) << [](acquired_cown<Egg> egg) {
-                if (egg->ready())
                     debug("Eggs are ready");
             };
             when (bacon) << [](acquired_cown<Bacon> bacon) {
-                if (bacon->ready())
                     debug("Bacon is ready");
             };
 
             when (bread, egg, bacon) << [=](auto bread, auto egg, auto bacon) {
                 Juice();
+                debug("OJ is ready");
                 debug("Finished making breakfast");
                 std::exit(0);
             };
