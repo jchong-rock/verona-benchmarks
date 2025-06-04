@@ -5,7 +5,7 @@
 
 namespace jake_benchmark {
 
-namespace leader_multi_start {
+namespace leader_ring {
 
 typedef enum {
     Leader,
@@ -19,10 +19,10 @@ struct Node {
     State state = Follower;
 
     Node(uint64_t id): id(id) {
-        std::cout << " Made Node with id : " << id << std::endl ;
+        std::cout << " Made server with id : " << id << std::endl ;
     }
 
-    static void propagate_id(const cown_ptr<Node> & self, uint64_t message_id) {
+    static void election(const cown_ptr<Node> & self, uint64_t message_id) {
         when (self) << [=, tag=self](acquired_cown<Node> self) {
             self->state = Candidate;
             if (message_id == self->id) {
@@ -31,10 +31,11 @@ struct Node {
             }
             else {
                 uint64_t highest_id = std::max(message_id, self->id);
-                propagate_id(self->next, highest_id);
+                election(self->next, highest_id);
             }
         };
     }
+
     static void declare_leader(const cown_ptr<Node> & self, uint64_t id) {
         when (self) << [=, tag=self](acquired_cown<Node> self) {
             if (self->state != Leader) {
@@ -43,24 +44,21 @@ struct Node {
             }
             else {
                 std::cout << "Node " << self->id << " became leader" << std::endl;
-                //std::exit(0);
+                std::exit(0);
             }
         };
-    }
+    }    
+};
 };
 
-};
-struct LeaderMultiStart: public ActorBenchmark {
+struct LeaderRing: public ActorBenchmark {
     uint64_t servers;
-    uint64_t starters;
-    
-    LeaderMultiStart(uint64_t servers, uint64_t starters): servers(servers), starters(starters) {} 
-
+    LeaderRing(uint64_t servers): servers(servers) {} 
     void run() {
-        using namespace leader_multi_start;
-        std::vector<uint64_t> ids = gen_x_unique_randoms<uint64_t>(servers, 65535);
-        when (make_cown<LeaderMultiStart>(servers, starters)) << [=](acquired_cown<LeaderMultiStart> ld) {
-            std::vector<cown_ptr<leader_multi_start::Node>> server_list;
+        using namespace leader_ring;
+        std::vector<uint64_t> ids = gen_x_unique_randoms<uint64_t>(servers);
+        when (make_cown<LeaderRing>(servers)) << [=](acquired_cown<LeaderRing> ld) {
+            std::vector<cown_ptr<leader_ring::Node>> server_list;
             for (uint64_t i = 0; i < servers; i++) {
                 server_list.emplace_back(make_cown<Node>(ids[i]));
             }
@@ -73,10 +71,7 @@ struct LeaderMultiStart: public ActorBenchmark {
             when (server_list[servers - 1]) << [first=server_list[0]](acquired_cown<Node> svr) {
                 svr->next = first;
             };
-            std::vector<uint64_t> starts = gen_x_unique_randoms<uint64_t>(starters, servers-1);
-            for (uint64_t i = 0; i < starters; i++) {
-                Node::propagate_id(server_list[starts[i]], 0);
-            }
+            Node::election(server_list[0], 0);
         };
     }
 };

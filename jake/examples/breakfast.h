@@ -18,68 +18,39 @@ namespace breakfast {
 
     struct Food {
         virtual bool ready() = 0;
-        virtual std::string item_name() = 0;
     };
 
-    struct Toastable : public Food {
+    struct Bread : public Food {
         bool toasted = false;
-        virtual int toast_time() = 0;
-        bool ready() override {
-            return toasted;
-        }
-    };
-
-    struct Bread : public Toastable {
         int slices;
-        Bread(int slices): slices(slices) {
-
-        }
         bool has_jam = false;
         bool has_butter = false;
-        std::string item_name() override {
-            return toasted ? "toast" : "bread";
-        }
+        static const int toast_time = 8;
+        Bread(int slices): slices(slices) {}
         bool ready() override {
             return toasted && has_jam && has_butter;
         }
-        int toast_time() override {
-            return 8;
-        }
         void add_jam() {
-            debug("Begin adding jam");
-            if (this->toasted) {
-                this->has_jam = true;
-                debug("Added jam to toast");
-            }
-            else {
-                throw std::runtime_error("Cannot add jam to untoasted bread");
-            }
+            has_jam = true;
+            debug("Added jam to toast");
         }
         void add_butter() {
-            debug("Begin buttering toast");
-            if (this->toasted) {
-                this->has_butter = true;
-                debug("Buttered toast");
-            }
-            else {
-                throw std::runtime_error("Ewww, buttered raw bread!");
-            }
-            
+            has_butter = true;
+            debug("Buttered toast");
         }
-        static void toast(const cown_ptr<Bread> & self, std::function<void()> callback) {
-            when (self) << [=](acquired_cown<Bread> self) {
-                if (!self->toasted) {
-                    for (int i = 0; i < self->slices; i++)
-                        debug("Putting a slice of ", self->item_name(), " in the toaster");
-                    debug("Begin toasting ", self->item_name());
-                    usleep(self->toast_time() * MICROSECS);
-                    self->toasted = true;
-                    debug("Finished making ", self->item_name());
+        static void toast(const cown_ptr<Bread> & bread) {
+            when (bread) << [=](acquired_cown<Bread> bread) {
+                if (!bread->toasted) {
+                    for (int i = 0; i < bread->slices; i++)
+                        debug("Putting a slice of bread in the toaster");
+                    debug("Begin toasting");
+                    usleep(Bread::toast_time * MICROSECS);
+                    bread->toasted = true;
+                    debug("Remove toast from toaster");
                 }
                 else {
-                    throw std::runtime_error("Burned " + self->item_name());
+                    throw std::runtime_error("Burned toast!");
                 }
-                callback();
             };
         }
     };
@@ -102,115 +73,60 @@ namespace breakfast {
 
     // since Verona's cown_ptr type doesnt support inheritance, we can cheat using variant and visit
     // we will store cowns in vectors using variant and dispatch their behaviours using visit
-    using FryableCown = std::variant<cown_ptr<Bacon>, cown_ptr<Egg>>;
     using FoodCown = std::variant<cown_ptr<Bacon>, cown_ptr<Egg>, cown_ptr<Bread>>;
 
-    class Fryable : public Food {
-      protected:
+    struct Bacon : public Food {
+        int count;
+        Bacon(int count): count(count) {}
+        static const int cook_time = 10;
         bool cooked = false;
-        virtual int cook_time() = 0;
-        virtual std::string begin_message() = 0;
-        virtual std::string middle_message() = 0;
-        std::string finish_message() {
-            return "Put " + item_name() + " on plate";
-        }
-      public:
+
         bool ready() override {
             return cooked;
         }
-        static void fry(const FryableCown & item) {
-            std::visit([=](auto & fryable_cown) {
-                when (fryable_cown) << [=](auto fryable) {
-                    debug(fryable->begin_message());
-                    usleep(fryable->cook_time() * MICROSECS);
-                    debug(fryable->middle_message());
-                    usleep(fryable->cook_time() * MICROSECS);
-                    if (!fryable->cooked) {
-                        fryable->cooked = true;
-                        debug(fryable->finish_message());
-                    }
-                    else {
-                        throw std::runtime_error("Burned " + fryable->item_name());
-                    }
-                };
-            }, item);
+        
+        static void fry(const cown_ptr<Bacon> & bacon) {
+            when (bacon) << [=](auto bacon) {
+                debug("Putting ", bacon->count, " slices of bacon in the pan");
+                debug("Cooking first side of bacon");
+                usleep(Bacon::cook_time * MICROSECS);
+                for (int i = 0; i < bacon->count; i++) 
+                    debug("Flipping a side of bacon");
+                debug("Cooking second side of bacon");
+                usleep(Bacon::cook_time * MICROSECS);
+                bacon->cooked = true;
+            };
         }
     };
 
-    struct Bacon : public Fryable {
+
+    struct Egg : public Food {
         int count;
-        Bacon(int count): count(count) {
+        Egg(int count): count(count) {}
+        static const int cook_time = 5;
+        bool cooked = false;
 
+        bool ready() override {
+            return cooked;
         }
-        int cook_time() override {
-            return 10;
-        }
-        std::string item_name() override {
-            return "bacon";
-        }
-        std::string begin_message() override {
-            return std::string("Putting ") + std::to_string(count) + " slices of bacon in the pan\nFrying first side of " + item_name();
-        }
-        std::string middle_message() override {
-            std::string output;
-            for (int i = 0; i < count; i++) 
-                output += "Flipping a side of " + item_name() + "\n";
-            return output + "Frying second side of " + item_name();
+        
+        static void fry(const cown_ptr<Egg> & egg) {
+            when (egg) << [=](auto egg) {
+                debug("Warming the egg pan");
+                usleep(Egg::cook_time * MICROSECS);
+                debug("Cracking ", egg->count, " eggs");
+                debug("Cooking the eggs");
+                usleep(Egg::cook_time * MICROSECS);
+                egg->cooked = true;
+            };
         }
     };
-
-    struct Egg : public Fryable {
-        int count;
-        Egg(int count): count(count) {
-
-        }
-        int cook_time() override {
-            return 5;
-        }
-        std::string item_name() override {
-            return "eggs";
-        }
-        std::string begin_message() override {
-            return "Warming the " + item_name() + " pan";
-        }
-        std::string middle_message() override {
-            return std::string("Cracking ") + std::to_string(count) + " egg" + (count == 1 ? "\n" : "s\n") + "Cooking " + item_name();
-        }
-    };
-};
-
-struct Bool {
-    bool value;
-    Bool(bool value): value(value) {}
 };
 
 struct Breakfast : public ActorBenchmark {
     int bacon_num;
     int egg_num;
     Breakfast(int bacon_num, int egg_num): bacon_num(bacon_num), egg_num(egg_num) {}
-    // this is not ideal, I would prefer to be able to acquire all cowns at once, 
-    // but C++ makes it very difficult to turn a vector into a VARARGS list,
-    // especially when each member of the vector is of a different type.
-    void finish(std::vector<breakfast::FoodCown> food, std::function<void()> callback) {
-        using namespace breakfast;
-        cown_ptr<Bool> finished = make_cown<Bool>(true);
-        for (auto & f : food) {
-            std::visit([=](auto & food_cown) {
-                when (food_cown, finished) << [=](auto food, auto finished) {
-                    finished->value &= food->ready();
-                };
-            }, f);
-        }
-        when (finished) << [=](acquired_cown<Bool> finished) {
-            if (finished->value) {
-                callback();
-                std::exit(0);
-            }
-            else {
-                finish(food, callback);
-            }
-        };
-    }
 
     void run() {
         using namespace breakfast;
@@ -221,24 +137,33 @@ struct Breakfast : public ActorBenchmark {
             
             Coffee();
 
-            Fryable::fry(bacon);
-            Fryable::fry(egg);
-            Bread::toast(bread, [=]() {
-                when (bread) << [](acquired_cown<Bread> bread) {
-                    bread->add_butter();
-                    bread->add_jam();
-                };
-            });
-
-            std::vector<FoodCown> food;
+            Bacon::fry(bacon);
+            Egg::fry(egg);
+            Bread::toast(bread);
             
-            food.push_back(egg);
-            food.push_back(bacon);
-            food.push_back(bread);
-            finish(food, [=]() {
+            when (bread) << [](acquired_cown<Bread> bread) {
+                bread->add_butter();
+                bread->add_jam();
+            };
+
+            when (bread) << [](acquired_cown<Bread> bread) {
+                if (bread->ready())
+                    debug("Toast is ready");
+            };
+            when (egg) << [](acquired_cown<Egg> egg) {
+                if (egg->ready())
+                    debug("Eggs are ready");
+            };
+            when (bacon) << [](acquired_cown<Bacon> bacon) {
+                if (bacon->ready())
+                    debug("Bacon is ready");
+            };
+
+            when (bread, egg, bacon) << [=](auto bread, auto egg, auto bacon) {
                 Juice();
                 debug("Finished making breakfast");
-            });
+                std::exit(0);
+            };
         };
     }
 };

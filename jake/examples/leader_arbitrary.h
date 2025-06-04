@@ -65,6 +65,7 @@ struct Node {
                 self->highest_id = std::max(highest_id, self->highest_id);
                 if (self->received_from.size() == self->total_servers) {
                     declare_leader(self.cown());
+                    debug(" Leader elected with id : ", self->highest_id);
                 }
                 else {
                     propagate_ids(self.cown());
@@ -85,7 +86,6 @@ struct Node {
     static void declare_leader(const cown_ptr<Node> & self) {
         when(self) << [=](acquired_cown<Node> self) {
             if (self->state == Candidate) {
-                debug(" Leader elected with id : ", self->highest_id);
                 self->state = (self->id == self->highest_id) ? Leader : Follower;
                 for (auto const& child : self->neighbours)
                     election_result(child, self->highest_id);

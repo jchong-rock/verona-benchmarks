@@ -1,7 +1,11 @@
 #include "util/bench.h"
 
 #include "examples/leader.h"
+#include "examples/leader_ring.h"
+#include "examples/leader_ring_boc.h"
+#include "examples/leader_ring_onlogn_boc.h"
 #include "examples/leader_multiple_starts.h"
+#include "examples/leader_multiple_starts_boc.h"
 #include "examples/leader_dag.h"
 #include "examples/leader_dag_broken.h"
 #include "examples/leader_dag_no_mailbox.h"
@@ -37,12 +41,23 @@ int main(const int argc, const char** argv) {
   if (benchmarker.opt.has("--leader")) {
     RUN(jake_benchmark::Leader, servers);
   }
+  else if (benchmarker.opt.has("--leader_ring")) {
+    RUN(jake_benchmark::LeaderRing, servers);
+  }
+  else if (benchmarker.opt.has("--leader_ring_boc")) {
+    RUN(jake_benchmark::LeaderRingBoC, servers);
+  }
+  else if (benchmarker.opt.has("--leader_ring_onlogn")) {
+    RUN(jake_benchmark::LeaderRingOnlognBoC, servers);
+  }
   else {
     size_t divisions = benchmarker.opt.is<size_t>("--divisions", 5);
 
     if (benchmarker.opt.has("--leader_multiple_starts"))
       RUN(jake_benchmark::LeaderMultiStart, servers, divisions);
     
+    if (benchmarker.opt.has("--leader_multiple_starts_boc"))
+      RUN(jake_benchmark::LeaderMultiStartBoC, servers, divisions);
 
     if (benchmarker.opt.has("--leader_dag"))
       RUN(jake_benchmark::LeaderDAG, servers, divisions);
