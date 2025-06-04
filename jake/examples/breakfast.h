@@ -97,12 +97,12 @@ struct Breakfast : public ActorBenchmark {
     void run() {
         using namespace breakfast;
         when (make_cown<Breakfast>(bacon_num,egg_num)) << [=](acquired_cown<Breakfast> bk) {
+            Coffee();
+            debug("Coffee is ready");
+
             cown_ptr<Bread> bread = make_cown<Bread>(2);
             cown_ptr<Bacon> bacon = make_cown<Bacon>(3);
             cown_ptr<Egg> egg = make_cown<Egg>(3);
-            
-            Coffee();
-            debug("Coffee is ready");
 
             Bacon::fry(bacon);
             Egg::fry(egg);
