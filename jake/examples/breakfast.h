@@ -17,6 +17,7 @@ namespace breakfast {
         int slices;
         Bread(int slices): slices(slices) {}
         static const int toast_time = 8;
+        bool toasted = false;
 
         void add_jam() {
             debug("Added jam to toast");
