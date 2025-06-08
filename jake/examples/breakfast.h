@@ -91,13 +91,12 @@ namespace breakfast {
 };
 
 struct Breakfast : public ActorBenchmark {
-    int bacon_num;
-    int egg_num;
-    Breakfast(int bacon_num, int egg_num): bacon_num(bacon_num), egg_num(egg_num) {}
+
+    Breakfast() {}
 
     void run() {
         using namespace breakfast;
-        when (make_cown<Breakfast>(bacon_num,egg_num)) << [=](acquired_cown<Breakfast> bk) {
+        when (make_cown<Breakfast>()) << [=](acquired_cown<Breakfast> bk) {
             Coffee();
             debug("Coffee is ready");
 

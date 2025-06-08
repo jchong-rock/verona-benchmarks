@@ -11,7 +11,7 @@
 
 namespace jake_benchmark {
 
-namespace breakfast {
+namespace breakfast_ideal {
 
     // We use inheritance to make it easy to extend this program
     // e.g. we could add Bagels, which could inherit from Toastable
@@ -294,15 +294,15 @@ struct Bool {
     Bool(bool value): value(value) {}
 };
 
-struct Breakfast : public ActorBenchmark {
+struct BreakfastIdeal : public ActorBenchmark {
     int bacon_num;
     int egg_num;
-    Breakfast(int bacon_num, int egg_num): bacon_num(bacon_num), egg_num(egg_num) {}
+    BreakfastIdeal(int bacon_num, int egg_num): bacon_num(bacon_num), egg_num(egg_num) {}
     // this is not ideal, I would prefer to be able to acquire all cowns at once, 
     // but C++ makes it very difficult to turn a vector into a VARARGS list,
     // especially when each member of the vector is of a different type.
-    void finish(std::vector<breakfast::FoodCown> food) {
-        using namespace breakfast;
+    void finish(std::vector<breakfast_ideal::FoodCown> food) {
+        using namespace breakfast_ideal;
         cown_ptr<Bool> finished = make_cown<Bool>(true);
         for (auto & f : food) {
             std::visit([=](auto & food_cown) {
@@ -313,7 +313,7 @@ struct Breakfast : public ActorBenchmark {
         }
         when (finished) << [=](acquired_cown<Bool> finished) {
             if (finished->value) {
-                debug("Finished making breakfast");
+                debug("Finished making breakfast_ideal");
                 std::exit(0);
             }
             else {
@@ -323,8 +323,8 @@ struct Breakfast : public ActorBenchmark {
     }
 
     void run() {
-        using namespace breakfast;
-        when (make_cown<Breakfast>(bacon_num,egg_num)) << [=](acquired_cown<Breakfast> bk) {
+        using namespace breakfast_ideal;
+        when (make_cown<BreakfastIdeal>(bacon_num,egg_num)) << [=](acquired_cown<BreakfastIdeal> bk) {
             cown_ptr<Bread> bread = make_cown<Bread>();
             cown_ptr<Cup> cup = make_cown<Cup>();
             std::vector<FryableCown> fryables;

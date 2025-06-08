@@ -19,11 +19,11 @@ struct Node {
     cown_ptr<Node> next;
     State state = Follower;
 
-    Node(uint64_t id): id(id), highest_id(id) {
-        std::cout << " Made server with id : " << id << std::endl;
+    Node(uint64_t id): id(id) {
+        std::cout << " Made Node with id : " << id << std::endl ;
     }
 
-    static void election(const cown_ptr<Node> & self, const cown_ptr<Node> & next) {
+    static void share_ids(const cown_ptr<Node> & self, const cown_ptr<Node> & next) {
         when (self, next) << [=](acquired_cown<Node> self, acquired_cown<Node> next) {
             self->state = Candidate;
             if (self->highest_id == next->id) {
@@ -34,11 +34,10 @@ struct Node {
                 uint64_t highest_id = std::max(next->highest_id, self->highest_id);
                 self->highest_id = highest_id;
                 next->highest_id = highest_id;
-                election(next.cown(), next->next);
+                share_ids(next.cown(), next->next);
             }
         };
     }
-
     static void declare_leader(const cown_ptr<Node> & self, uint64_t id) {
         when (self) << [=, tag=self](acquired_cown<Node> self) {
             if (self->state != Leader) {
@@ -47,20 +46,23 @@ struct Node {
             }
             else {
                 std::cout << "Node " << self->id << " became leader" << std::endl;
-                std::exit(0);
+                //std::exit(0);
             }
         };
-    }    
-};
+    }
 };
 
-struct LeaderRingBoC: public BocBenchmark {
+};
+struct LeaderRingBoC: public ActorBenchmark {
     uint64_t servers;
-    LeaderRingBoC(uint64_t servers): servers(servers) {} 
+    uint64_t starters;
+    
+    LeaderRingBoC(uint64_t servers, uint64_t starters): servers(servers), starters(starters) {} 
+
     void run() {
         using namespace leader_ring_boc;
-        std::vector<uint64_t> ids = gen_x_unique_randoms<uint64_t>(servers);
-        when (make_cown<LeaderRingBoC>(servers)) << [=](acquired_cown<LeaderRingBoC> ld) {
+        std::vector<uint64_t> ids = gen_x_unique_randoms<uint64_t>(servers, 65535);
+        when (make_cown<LeaderRingBoC>(servers, starters)) << [=](acquired_cown<LeaderRingBoC> ld) {
             std::vector<cown_ptr<leader_ring_boc::Node>> server_list;
             for (uint64_t i = 0; i < servers; i++) {
                 server_list.emplace_back(make_cown<Node>(ids[i]));
@@ -74,7 +76,10 @@ struct LeaderRingBoC: public BocBenchmark {
             when (server_list[servers - 1]) << [first=server_list[0]](acquired_cown<Node> svr) {
                 svr->next = first;
             };
-            Node::election(server_list[0], server_list[1]);
+            std::vector<uint64_t> starts = gen_x_unique_randoms<uint64_t>(starters, servers-2);
+            for (uint64_t i = 0; i < starters; i++) {
+                Node::share_ids(server_list[starts[i]], server_list[starts[i+1]]);
+            }
         };
     }
 };
