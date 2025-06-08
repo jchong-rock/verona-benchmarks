@@ -34,6 +34,9 @@ int main(const int argc, const char** argv) {
   size_t servers = benchmarker.opt.is<size_t>("--servers", 100);
   size_t divisions = benchmarker.opt.is<size_t>("--divisions", 5);
 
+  servers = benchmarker.opt.is<size_t>("--bacon", servers);
+  divisions = benchmarker.opt.is<size_t>("--eggs", divisions);
+
   if (benchmarker.opt.has("--leader_ring")) 
     RUN(jake_benchmark::LeaderRing, servers, divisions);
   
