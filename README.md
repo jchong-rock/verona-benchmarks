@@ -15,3 +15,7 @@ For breakfast examples:
 For breakfast_ideal, set bacon and eggs using "--bacon" and "--eggs" flags respectively.
 breakfast has no flags to set.
 
+Example usage:
+
+run.sh --leader_ring --servers 100 --divisions 30
+Runs leader_ring.h with 100 servers and 30 starters.
