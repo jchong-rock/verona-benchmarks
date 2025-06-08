@@ -115,13 +115,13 @@ struct Breakfast : public ActorBenchmark {
             };
 
             when (bread) << [](acquired_cown<Bread> bread) {
-                    debug("Toast is ready");
+                debug("Toast is ready");
             };
             when (egg) << [](acquired_cown<Egg> egg) {
-                    debug("Eggs are ready");
+                debug("Eggs are ready");
             };
             when (bacon) << [](acquired_cown<Bacon> bacon) {
-                    debug("Bacon is ready");
+                debug("Bacon is ready");
             };
 
             when (bread, egg, bacon) << [=](auto bread, auto egg, auto bacon) {
