@@ -2,6 +2,7 @@
 #include "util/random.h"
 #include "../typecheck.h"
 #include "../rng.h"
+#include "../safe_print.h"
 
 namespace jake_benchmark {
 
@@ -19,7 +20,7 @@ struct Node {
     State state = Follower;
 
     Node(uint64_t id): id(id) {
-        std::cout << " Made Node with id : " << id << std::endl ;
+        debug(" Made Node with id : ", id);
     }
 
     static void propagate_id(const cown_ptr<Node> & self, uint64_t message_id) {
@@ -42,8 +43,8 @@ struct Node {
                 declare_leader(self->next, id);
             }
             else {
-                std::cout << "Node " << self->id << " became leader" << std::endl;
-                //std::exit(0);
+                debug("Node ", self->id, " became leader");
+                std::exit(0);
             }
         };
     }
