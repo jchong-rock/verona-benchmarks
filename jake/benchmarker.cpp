@@ -6,6 +6,7 @@
 #include "examples/leader_arbitrary.h"
 #include "examples/breakfast.h"
 #include "examples/breakfast_ideal.h"
+#include "examples/timed/timed.h"
 
 #include <algorithm>
 
@@ -54,5 +55,8 @@ int main(const int argc, const char** argv) {
 
   if (benchmarker.opt.has("--breakfast_ideal"))
     RUN(jake_benchmark::BreakfastIdeal, servers, divisions);
+
+  if (benchmarker.opt.has("--timed"))
+    RUN(jake_benchmark::TimedBench, servers, divisions);
 
 }
